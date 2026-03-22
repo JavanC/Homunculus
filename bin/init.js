@@ -66,14 +66,35 @@ function main() {
     console.log('  \x1b[32m✓\x1b[0m Added evolution rules');
   }
 
-  // 3. Copy CLAUDE.md template
-  const claudeSrc = path.join(TEMPLATES_DIR, 'CLAUDE.md.template');
+  // 3. Add Homunculus section to CLAUDE.md
   const claudeDest = path.join(projectDir, 'CLAUDE.md');
-  if (!fs.existsSync(claudeDest) && fs.existsSync(claudeSrc)) {
-    const template = fs.readFileSync(claudeSrc, 'utf8');
-    const projectName = path.basename(projectDir);
-    fs.writeFileSync(claudeDest, template.replace(/\{\{PROJECT_NAME\}\}/g, projectName));
-    console.log('  \x1b[32m✓\x1b[0m Created CLAUDE.md');
+  const homunculusSection = `
+## Homunculus — Self-Evolving AI Assistant
+
+This project uses Homunculus for goal-driven evolution.
+
+- **Goal Tree**: \`architecture.yaml\` — defines goals, metrics, and health checks
+- **Instincts**: \`homunculus/instincts/personal/\` — auto-extracted patterns
+- **Skills**: \`homunculus/evolved/skills/\` — tested, versioned knowledge
+- **Commands**: \`/hm-setup\` (define goals) | \`/hm-night\` (evolution cycle) | \`/hm-status\` (dashboard)
+`;
+
+  if (fs.existsSync(claudeDest)) {
+    const existing = fs.readFileSync(claudeDest, 'utf8');
+    if (!existing.includes('Homunculus')) {
+      fs.appendFileSync(claudeDest, '\n' + homunculusSection);
+      console.log('  \x1b[32m✓\x1b[0m Added Homunculus section to existing CLAUDE.md');
+    } else {
+      console.log('  \x1b[33m-\x1b[0m CLAUDE.md already has Homunculus section');
+    }
+  } else {
+    const claudeSrc = path.join(TEMPLATES_DIR, 'CLAUDE.md.template');
+    if (fs.existsSync(claudeSrc)) {
+      const template = fs.readFileSync(claudeSrc, 'utf8');
+      const projectName = path.basename(projectDir);
+      fs.writeFileSync(claudeDest, template.replace(/\{\{PROJECT_NAME\}\}/g, projectName));
+      console.log('  \x1b[32m✓\x1b[0m Created CLAUDE.md');
+    }
   }
 
   // 4. Copy core scripts
