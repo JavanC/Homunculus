@@ -14,18 +14,20 @@ One command. Answer a few questions. Start using Claude Code. Your assistant beg
 
 ## Why
 
-Every Claude Code user hits the same wall:
+Every Claude Code power user hits the same wall:
 
 ```
 Week 1:  "Claude is amazing!"
-Week 2:  "Let me add some rules..."
-Week 3:  "I need better prompts, more hooks, custom commands..."
+Week 2:  "Let me add some rules and hooks..."
+Week 3:  "I need skills, agents, MCP servers, custom commands..."
 Week 4:  "I spend more time configuring Claude than using it."
 ```
 
-The irony: **you're the bottleneck in your own AI workflow.** You read blog posts, watch tutorials, copy configs — all to make your AI slightly better. Meanwhile, your AI sits idle every night.
+Sound familiar? Look at [everything-claude-code](https://github.com/affaan-m/everything-claude-code) — 28 agents, 116 skills, 59 commands. Incredible work. But someone had to manually build every single one. And when Claude Code updates, someone has to manually update them too.
 
-Homunculus fixes this. You define goals. The system figures out the rest.
+**You're the bottleneck in your own AI workflow.** You read blog posts, watch tutorials, copy configs, tune prompts — all to make your AI slightly better. Meanwhile, your AI sits idle every night doing nothing.
+
+Homunculus flips this: you define goals, and the system evolves itself — creating skills, agents, hooks, and scripts on its own. While you sleep.
 
 ---
 
@@ -218,13 +220,52 @@ Goal: "Catch bugs before merge"
   v4: agent    → code-reviewer.md (AI-powered)
 ```
 
-### Nightly Agent (Advanced)
+### Nightly Agent
 
-A scheduled agent that runs overnight via `launchd` or `cron`:
-- Checks goal health → identifies weak spots
-- Researches better implementations
-- Runs experiments in isolated worktrees
-- Generates morning reports with action items
+This is what makes the system truly autonomous. Without it, you'd still need to manually run `/eval-skill`, `/improve-skill`, `/evolve`. The nightly agent **does all of that for you** while you sleep.
+
+A scheduled agent (via `launchd` on macOS or `cron` on Linux) runs a heartbeat loop every night:
+
+```
+ You go to sleep
+        │
+        ▼
+ ┌──────────────────────────────────────────────┐
+ │  Nightly Agent (heartbeat loop)              │
+ │                                              │
+ │  1. Health Check                             │
+ │     Scan goal tree → which goals are red?    │
+ │                                              │
+ │  2. Evolve                                   │
+ │     Run /eval-skill on all skills            │
+ │     Run /improve-skill on failing ones       │
+ │     Converge new instincts → skills          │
+ │     Prune outdated instincts                 │
+ │                                              │
+ │  3. Research                                 │
+ │     Scan tech news, changelogs, community    │
+ │     "Is there a better way to achieve X?"    │
+ │                                              │
+ │  4. Experiment                               │
+ │     Generate hypotheses from weak goals      │
+ │     Run experiments in isolated worktrees    │
+ │     Merge if passed, discard if failed       │
+ │                                              │
+ │  5. Report                                   │
+ │     Generate morning report with:            │
+ │     - What changed overnight                 │
+ │     - New skills/instincts created           │
+ │     - Experiments run and results            │
+ │     - Suggested actions for you              │
+ └──────────────────────────────────────────────┘
+        │
+        ▼
+ You wake up to a smarter assistant + a report
+```
+
+**Real example:** In our reference system, the nightly agent produced **134 commits across 11 nights** — evolving skills, running experiments, researching Claude Code updates, and archiving outdated patterns. All without any human input.
+
+The nightly agent is what turns Homunculus from "a tool you use" into "a system that grows on its own."
 
 See [docs/nightly-agent.md](docs/nightly-agent.md) for setup.
 
