@@ -119,9 +119,11 @@ This project uses Homunculus for goal-driven evolution.
   if (!settings.hooks) settings.hooks = {};
   if (!settings.hooks.PostToolUse) {
     settings.hooks.PostToolUse = [{
-      type: "command",
-      command: "bash scripts/observe.sh post",
-      description: "Homunculus: observe tool usage"
+      matcher: "",
+      hooks: [{
+        type: "command",
+        command: "bash scripts/observe.sh post"
+      }]
     }];
     ensureDir(path.join(projectDir, '.claude'));
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
