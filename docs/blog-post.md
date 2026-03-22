@@ -40,19 +40,21 @@ A better approach: start with a single agent. Let the system observe where it st
 
 ## The Building Blocks Exist. The Spine Doesn't.
 
-The community is moving toward AI autonomy. Building blocks keep appearing:
+The community is moving toward AI autonomy. And the progress is remarkable. Look at what appeared in just the past few months:
 
-- [OpenClaw](https://github.com/openclaw/openclaw) lets AI **extend its own capabilities** autonomously
-- [everything-claude-code](https://github.com/affaan-m/everything-claude-code) **extracts behavioral patterns** from usage and persists them
-- [Karpathy's autoresearch](https://x.com/karpathy) proved AI can **run 118 experiment iterations** over 12 hours, no human involved
+- [OpenClaw](https://github.com/openclaw/openclaw) showed that AI can **extend its own capabilities** without human prompting. 300K+ stars in weeks. An AI that writes its own tools.
+- [everything-claude-code](https://github.com/affaan-m/everything-claude-code) built a system that **extracts behavioral patterns** from your usage and persists them across sessions. Your AI remembers how you work. Anthropic Hackathon winner.
+- [Karpathy's autoresearch](https://x.com/karpathy) proved AI can **run 118 experiment iterations** over 12 hours, improving results with zero human input. Autonomous scientific research.
 
-Each one solves a real problem. But they're **disconnected**. OpenClaw extends capabilities and can't tell whether they made things better. Pattern extraction captures behaviors and can't tell which ones matter. Autoresearch runs experiments and has no system telling it which experiments to run.
+These projects are all brilliant. And they're all pointing in the same direction: **AI should improve itself, not wait for humans to improve it.**
 
-The missing piece is a **spine**. A structure connecting these capabilities, giving them direction. Answering: where are we heading? Which parts work? Which don't? Try this next.
+But they're disconnected pieces. OpenClaw extends capabilities and can't tell whether the extensions made things better. Pattern extraction captures behaviors and can't rank which ones matter. Autoresearch runs experiments and has no system telling it which experiments to run next.
 
-AI can improve itself. It needs a skeleton to organize around.
+Each one is a powerful limb. None of them have a spine.
 
-That skeleton is a goal tree.
+The missing piece is a structure that connects these capabilities, gives them direction, and answers: where are we heading? Which parts work? Which parts need attention?
+
+That structure is a goal tree.
 
 ---
 
