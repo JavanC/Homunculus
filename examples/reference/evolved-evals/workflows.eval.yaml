@@ -1,0 +1,148 @@
+skill: workflows
+version: "1.2"
+last_eval: "2026-03-22"
+pass_rate: null
+scenarios_passed: null
+total_scenarios: 10
+
+scenarios:
+  - id: url-research-trigger
+    name: "URL 研究觸發"
+    context: |
+      用戶貼了一個技術文章 URL
+    expected_behavior: |
+      依循 Workflow 1：WebFetch 抓取 → 摘要（主題+關鍵要點）→ 評估與系統關聯性 → 必要時更新 memory
+    anti_patterns:
+      - "只貼連結內容，沒有摘要"
+      - "沒有評估與系統的關聯性"
+      - "無謂建立 Forge 任務"
+    result: PASS
+
+  - id: project-init-request
+    name: "開項目請求"
+    context: |
+      用戶說：「幫我開個項目追蹤 Rust 學習」
+    expected_behavior: |
+      合併 Workflow 3+4：建 projects/{slug}/README.md → 建 Forge 任務 + 里程碑 → 建議第一步（具體可執行）
+    anti_patterns:
+      - "只回覆「好的」沒有實際建立"
+      - "有目錄但沒有里程碑"
+      - "沒有具體下一步"
+    result: PASS
+
+  - id: tech-evaluation
+    name: "技術評估"
+    context: |
+      用戶問：「Bun 值得用來替換 Node 嗎？」
+    expected_behavior: |
+      依循 Workflow 5：研究 Bun → 與現有系統比較（功能、成本、複雜度）→ 明確結論（採用/不採用/觀望）→ 行動建議 → 記入 research-notes
+    anti_patterns:
+      - "給出模糊回覆，沒有明確結論"
+      - "有結論但缺少比較依據"
+      - "沒有記入 memory"
+    result: PASS
+
+  - id: no-workflow-needed
+    name: "不該套用 workflow 的場景"
+    context: |
+      用戶問：「今天晚餐吃什麼好？」
+    expected_behavior: |
+      直接輕鬆回答，不套用任何 workflow 結構，自然回覆
+    anti_patterns:
+      - "出現「步驟 1、步驟 2」等結構化回覆"
+      - "硬套 workflow 模板回答日常問題"
+    result: PASS
+
+  - id: debug-workflow
+    name: "Debug 流程"
+    context: |
+      用戶說：「heartbeat 好像沒有跑，幫我看看」
+    expected_behavior: |
+      依循 Workflow 6：先查 log（不急著猜）→ 定位根因 → 修復 → 驗證修復有效 → 如果系統性問題加防護
+    anti_patterns:
+      - "不查 log，直接猜測原因"
+      - "修完沒有驗證"
+      - "沒有說明根因"
+    result: PASS
+
+  - id: feature-dev-workflow
+    name: "功能開發流程"
+    context: |
+      用戶說：「在 Quest Board 加一個 /api/stats endpoint」
+    expected_behavior: |
+      依循 Workflow 2：讀現有架構 → 實作 → 語法預檢（node -c）→ 服務重啟 → 端點驗證（curl）→ 回報結果
+    anti_patterns:
+      - "跳過語法預檢直接執行"
+      - "沒有重啟服務就測試"
+      - "實作完沒有驗證端點"
+    result: PASS
+
+  - id: ambiguous-workflow-trigger
+    name: "模糊觸發條件：URL + 功能需求混合"
+    context: |
+      用戶貼了一個 GitHub repo URL 並說：「我覺得這個 token compressor 可以整合進我們系統，幫我看看」
+    expected_behavior: |
+      正確判斷：同時觸發 Workflow 1（URL 研究）+ Workflow 5（技術評估），不是 Workflow 2（功能開發）。
+      執行順序：先用 WebFetch/gh 研究該 repo → 評估技術可行性和整合成本 → 明確結論（整合/不整合/觀望）→ 若整合建立 Forge 任務，若不整合記錄原因到 research-notes。
+      不應立即開始寫程式碼整合，因為還沒評估。
+    anti_patterns:
+      - "直接開始寫整合程式碼而不先研究"
+      - "只研究不給整合/不整合的結論"
+      - "只套用一個 workflow 而忽略另一個維度"
+      - "沒有記錄評估結論（memory / research-notes）"
+
+  # Boundary scenarios（有辨別力）
+  - id: boundary-testable-to-experiments-not-forge
+    name: "Boundary: testable 發現應進 experiments queue，非 Forge"
+    context: |
+      研究時發現 Context-Gateway proxy（Go 工具，75% context 時背景壓縮）
+      有助於降低 compact 頻率。評估後認為這是 [testable] 發現，需要驗證效果。
+      你準備為這個發現建立一個 Forge 任務。
+    expected_behavior: |
+      [testable] 發現不建 Forge 任務，而是寫入 experiments/queue.jsonl：
+      {"id":"exp-YYYY-MM-DD-NNN","source":{"type":"research","ref":"主題名稱"},
+       "hypothesis":"假設","priority":"normal"}
+      同時建立對應的 YAML 檔案 homunculus/experiments/<id>.yaml。
+      Forge 任務是用來追蹤開發工作，不是實驗假設。
+    anti_patterns:
+      - "建立 Forge 任務追蹤這個實驗"
+      - "直接採用（不先實驗就用 adoptable 處理）"
+      - "既不建 Forge 也不加 experiments queue，只記錄在 research-notes"
+
+  - id: boundary-debug-systematic-protection
+    name: "Boundary: debug 後是否加防護"
+    context: |
+      調試發現 heartbeat.sh 中 jq 讀取 state.json 時，若該檔案為空（初次部署
+      或意外清空），會造成 jq: error null iterator 且 heartbeat 靜默失敗。
+      已修復當下的空檔問題。是否需要加防護？
+    expected_behavior: |
+      是系統性問題（state.json 可能在多種情況下出現空/損毀），需要加防護：
+      在讀取前先用 jq empty state.json 驗證，或提供預設值 jq '.x // []' 。
+      Workflow 6 步驟 5：「如果系統性問題加防護」— 空 state.json 是可重現的
+      邊界情況，不是一次性 bug。
+    anti_patterns:
+      - "修完眼前問題就結束，不加防護"
+      - "不評估是否系統性，直接全加防護"
+      - "加防護但不測試空 state.json 情境"
+
+  # v1.2 新增：Use when 路由辨別力 scenario
+  - id: boundary-skill-routing-debug-vs-api-diagnosis
+    name: "Boundary: 系統性 debug 應路由到 workflows 而非 api-system-diagnosis"
+    context: |
+      你有多個 skill 可選：workflows、api-system-diagnosis、tdd-workflow。
+      用戶說：「heartbeat 今天跑了但沒推 Discord，幫我查一下」
+      這個問題可能是 heartbeat 腳本問題、Discord webhook 問題、或 bridge 服務問題。
+      你準備直接載入 api-system-diagnosis skill 來處理，因為涉及 API 呼叫。
+    expected_behavior: |
+      正確路由是 workflows skill（Use when 明確包含「系統性 debug vs 孤立 bug」）。
+      選擇 Workflow 6（Debug）：先查 heartbeat log → 定位根因（是 heartbeat.sh？bridge？webhook？）
+      → 修復 → 驗證。
+      api-system-diagnosis 是針對 Quest Board / server.js 的 API 層 bug，
+      不是 heartbeat 端到端排查的首選。正確判斷：
+      - 「heartbeat 今天有跑但沒推」= 行為異常但服務存活 → 查 log → Workflow 6
+      - 若發現是 Discord webhook API 回傳 4xx → 那時才需要 api-system-diagnosis
+    anti_patterns:
+      - "直接載入 api-system-diagnosis 處理 heartbeat 整體異常"
+      - "不查 log 就猜是 webhook 問題"
+      - "沒有依循 debug workflow（先查 log → 定位 → 修 → 驗證）"
+      - "將整個問題委派給 shell-debugger subagent 而不先自行查 log"

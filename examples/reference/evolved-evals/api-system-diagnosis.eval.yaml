@@ -1,0 +1,125 @@
+skill: api-system-diagnosis
+version: "1.1"
+last_eval: "2026-03-19"
+pass_rate: 100
+total_scenarios: 9
+
+scenarios:
+  - id: ui-bug-api-first
+    name: "UI 顯示異常 — API 優先診斷"
+    context: |
+      Quest board 的 Done 區塊出現一張 ticket 應該已完成隱藏。
+      用戶說：「為什麼 ticket #123 還顯示在 Done 區？」
+    expected_behavior: |
+      先 curl API 驗證數據（不直接看前端代碼），確認 status 欄位值後，
+      再 grep 前端 filter 邏輯找不符的條件。
+    anti_patterns:
+      - "直接讀取前端 JS 代碼猜問題"
+      - "假設問題在 CSS 隱藏邏輯"
+
+  - id: service-restart-cycle
+    name: "修改 server.js 後功能未生效"
+    context: |
+      在 server.js 新增了 POST /api/reminder/add，curl 測試返回 404。
+    expected_behavior: |
+      識別問題為進程未重啟（舊進程仍在執行），kill PID → sleep 1 → 重啟 →
+      先確認 /health → 再測試新端點。
+    anti_patterns:
+      - "直接假設 endpoint 路徑錯誤"
+      - "跳過 /health 直接測試新端點"
+      - "不用 sleep，立即重啟後立刻測試"
+
+  - id: parameter-ignored-diagnosis
+    name: "API 參數被後端忽略"
+    context: |
+      前端傳送 POST body 含 suggested: true，但後端返回的 status 仍是 "pending"。
+    expected_behavior: |
+      三步驗證：① grep 確認前端確實傳了參數 ② grep server.js 確認後端讀取 body.suggested
+      ③ 確認後端將 suggested 寫入 state。
+    anti_patterns:
+      - "只看前端代碼，不看後端讀取邏輯"
+      - "假設是 CORS 或網路問題"
+
+  - id: filter-mismatch
+    name: "Filter 結果與預期不符"
+    context: |
+      UI filter 設為「只顯示 active」，但 done 狀態的 item 仍顯示。
+    expected_behavior: |
+      curl API 獲取 raw data，確認 status 欄位值（"done" vs "completed" vs "finished"），
+      再 grep filter 邏輯找硬編碼值不符之處。
+    anti_patterns:
+      - "直接修改前端 filter 邏輯，不先確認 API 返回的實際 status 值"
+
+  - id: cross-layer-minimal-change
+    name: "跨層修改但應最小化改動"
+    context: |
+      要把 Forge ticket 的 delegate_to 欄位儲存。需要修改 API、state.json schema、
+      前端顯示三層，但只有 API 和 state 真的需要改。
+    expected_behavior: |
+      逐層問「這層需要改嗎？」— API 確認需要接收 delegate_to，state 確認需要存儲，
+      前端 grep 後發現現有 display 邏輯已支援，不需要修改前端。
+    anti_patterns:
+      - "假設三層都需要修改"
+      - "不 grep 確認前端現有邏輯就開始修改"
+
+  - id: multi-layer-data-pollution
+    name: "多層數據診斷 — 歷史污染"
+    context: |
+      API /api/tasks 返回的列表中出現已刪除的 item（prefix 為 old_*），
+      前端顯示出現重複項目。
+    expected_behavior: |
+      curl API 確認污染來自數據層（state.json 含舊數據），而非前端重複渲染。
+      確認根因後直接修復 state.json，不需要改前端。
+    anti_patterns:
+      - "假設是前端重複渲染問題，從 JS 開始看"
+      - "同時修改 API 和前端，無法確定根因"
+
+  - id: cross-system-state-sync
+    name: "跨系統狀態同步驗證"
+    context: |
+      修改 /api/forge/complete 後，需確認 quest-board API、session-start、
+      heartbeat 三個系統都能正確反映新狀態。
+    expected_behavior: |
+      使用驗證清單：curl API 確認 JSON → cat sessions 確認摘要 →
+      curl /health 確認 heartbeat → grep scripts/ 確認其他依賴。
+    anti_patterns:
+      - "只測試 API，不驗證 session-start 和 heartbeat 的影響"
+
+  # Boundary scenarios（有辨別力）
+  - id: boundary-valid-service-still-404
+    name: "Boundary: 服務重啟後仍然 404"
+    context: |
+      新增 POST /api/test，重啟 server.js 後 curl 仍返回 404。
+      服務 /health 回應正常。
+    expected_behavior: |
+      排除進程問題後，應 grep server.js 確認 endpoint 路徑拼寫、
+      HTTP method（GET vs POST）、middleware 順序是否正確。
+    anti_patterns:
+      - "反復重啟服務"
+      - "假設是 port 衝突"
+
+  - id: boundary-api-correct-ui-wrong
+    name: "Boundary: API 數據正確但 UI 仍顯示錯誤"
+    context: |
+      curl API 確認 status 欄位值為 "done"，但 UI filter 仍顯示此 item。
+    expected_behavior: |
+      問題定位在前端 — grep filter 邏輯，確認 filter 條件是否與 API 值一致
+      （如 filter 用 "completed" 但 API 返回 "done"）。
+    anti_patterns:
+      - "懷疑 API 緩存，反復 curl"
+      - "修改 API 返回值以配合前端 filter"
+
+  - id: boundary-error-masks-root-cause
+    name: "Boundary: 錯誤訊息誤導診斷方向"
+    context: |
+      POST /api/forge/add 返回 400 Bad Request，body 為 {"error": "invalid stat value"}。
+      用戶確認 stat 欄位傳了 "vit"（合法值），但仍然 400。
+    expected_behavior: |
+      錯誤訊息可能不準確 — 不要只看 error message，要讀實際的 validation code。
+      grep server.js 中 /api/forge/add 的 handler，逐行檢查所有 validation 條件
+      （可能是 title/forge_cost/其他必填欄位缺失，但錯誤訊息只報了 stat）。
+      診斷原則：error message 是線索不是結論，要驗證 code path。
+    anti_patterns:
+      - "只看 error message 就認定是 stat 問題"
+      - "反覆改 stat 值嘗試"
+      - "不讀源碼就猜測原因"

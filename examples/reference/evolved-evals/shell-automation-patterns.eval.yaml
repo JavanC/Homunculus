@@ -1,0 +1,209 @@
+# Eval: Shell Automation Patterns
+# 測試案例定義 — 驗證 skill 是否能正確引導行為
+
+skill: shell-automation-patterns
+version: "1.6"
+last_eval: "2026-03-19"
+pass_rate: 1.0  # 14/14 scenarios (11 core + 3 boundary)
+total_scenarios: 14
+grader_type: model  # model=LLM 判斷 | code=腳本驗證
+
+scenarios:
+  - id: discord-chunking
+    name: "Discord 訊息超過 2000 字元"
+    context: |
+      你正在寫一個 shell script，需要把一份 3000 字元的報告發送到 Discord webhook。
+    expected_behavior: |
+      - 將訊息分成 < 2000 字元的 chunks
+      - 每個 chunk 獨立發送
+      - 使用 jq -Rs 處理特殊字元
+    anti_patterns:
+      - "直接發送 3000 字元（會被 Discord 截斷）"
+      - "用 Python 或其他語言處理（應該用 shell）"
+
+  - id: night-no-discord
+    name: "夜間不推送 Discord"
+    context: |
+      現在是凌晨 3 點，cron job 偵測到異常，需要通知用戶。
+    expected_behavior: |
+      - 寫入 log 檔或 night-report.md
+      - 不推送 Discord（夜間規則）
+    anti_patterns:
+      - "直接推送 Discord（違反夜間規則）"
+
+  - id: jq-atomic-update
+    name: "JSON 狀態檔案更新"
+    context: |
+      你需要更新 state.json 中的一個欄位。
+    expected_behavior: |
+      - 使用 tmpfile + mv 做原子更新
+      - 用 jq --arg 傳入變數（避免注入）
+      - 讀取時用 // empty 或 // default 設預設值
+    anti_patterns:
+      - "直接寫回原檔（非原子操作，crash 會損壞）"
+      - "用 echo 拼接 JSON（容易格式錯誤）"
+      - "用 sed 修改 JSON（fragile）"
+
+  - id: claude-in-script
+    name: "Shell script 中呼叫 Claude"
+    context: |
+      你正在寫一個 cron job，需要用 AI 處理一段文字。
+    expected_behavior: |
+      - 使用 claude --print（非互動模式）
+      - 必須 unset CLAUDECODE
+      - 用 stdin 傳入資料（< file）
+      - 指定模型 claude-sonnet-4-6
+    anti_patterns:
+      - "用 claude -p 啟動互動 session（cron 中不適用）"
+      - "忘記 unset CLAUDECODE（會干擾巢狀呼叫）"
+
+  - id: module-autodiscovery
+    name: "模組化 check 系統"
+    context: |
+      你要為 heartbeat 新增一個 check module。
+    expected_behavior: |
+      - 放在 checks/ 目錄下，命名為 *.sh
+      - 透過環境變數接收 context
+      - stdout 輸出 JSON（actions + state_updates）
+      - 失敗時不影響其他 module
+    anti_patterns:
+      - "硬編碼到 heartbeat.sh 主體中"
+      - "用 exit 1 中斷整個流程"
+
+  - id: jsonl-parsing
+    name: "解析 Claude session JSONL"
+    context: |
+      你需要從 Claude session log（JSONL 格式）中提取 cost 和 turns。
+    expected_behavior: |
+      - 用 jq select(.type=="result") 直接過濾
+      - tail -1 取最後一個 result
+      - 2>/dev/null 抑制解析錯誤
+      - 用 // fallback 處理缺失欄位
+    anti_patterns:
+      - "用 grep | echo | jq pipeline（multiline JSON 會壞）"
+      - "假設只有一個 result 事件"
+
+  - id: gmail-in-cron
+    name: "Cron 中操作 Gmail"
+    context: |
+      你要在排程任務中讀取 Gmail 未讀信件。
+    expected_behavior: |
+      - 使用 gog CLI（不用 MCP）
+      - 指定 --account starpincer@gmail.com
+    anti_patterns:
+      - "用 Gmail MCP（cron 中不可用）"
+
+  - id: multi-step-claude-resume
+    name: "多步驟 Claude headless 腳本"
+    context: |
+      你要在 shell script 中做兩步驟處理：第一步分析程式碼，第二步根據分析結果產出報告。
+      兩步驟需要共享 context（第二步需要知道第一步的結果）。
+    expected_behavior: |
+      - 第一步用 --output-format json 並提取 .session_id
+      - 第二步用 --resume "$SESSION_ID" 接續 context
+      - 兩步驟都要 unset CLAUDECODE
+      - 或提到 --json-schema 結構化輸出選項
+    anti_patterns:
+      - "把第一步的輸出塞進第二步的 prompt 作為純文字（context 不連續）"
+      - "忘記 unset CLAUDECODE"
+      - "只用一個 claude 呼叫完成所有事（不示範多步驟）"
+
+  - id: error-handling
+    name: "模組錯誤處理"
+    context: |
+      heartbeat check module 執行失敗了。
+    expected_behavior: |
+      - log 錯誤但繼續執行其他 module
+      - 用 || continue 跳過失敗的 module
+      - 錯誤寫入 log 檔
+    anti_patterns:
+      - "set -e 導致整個 heartbeat 中斷"
+      - "忽略錯誤不記錄"
+
+  - id: jq-null-safety
+    name: "jq null 安全與 reduce 陷阱"
+    context: |
+      shell script 中的 jq 指令出現 "Cannot iterate over null" 錯誤，
+      或用 reduce 處理 state.json 時輸出 null。
+    expected_behavior: |
+      - 加 ? 運算符（.array[]? 而非 .array[]）
+      - 或用 // [] 提供預設空陣列
+      - reduce scope 問題：在外層加 `. as $root |`，reduce 內用 $root.field
+      - 除錯步驟：提取 jq 表達式到 CLI 單獨測試
+    anti_patterns:
+      - "直接用 .field[] 不加 null guard"
+      - "在 reduce body 內用 .原始陣列[]（應用 $root 捕捉）"
+      - "用 try...catch（macOS jq 1.7.1 不支援）"
+
+  - id: jq-pipe-alternative-precedence
+    name: "jq // 優先順序陷阱"
+    context: |
+      jq 腳本出現 "Cannot iterate over string" 錯誤，
+      或 jq 中用 .field_a // .other_path | .field_b 取值結果不符預期。
+    expected_behavior: |
+      - 識別問題：| 優先順序低於 //，但 .path | expr // fallback | expr 容易誤解
+      - 解法：用括號明確指定 alternative 範圍：(.field_a // .field_b)
+      - 正確模式：jq '.items[$i] | (.name // .id)' 而非 jq '.items[$i].name // .items | .[$i].id'
+      - 提醒：// 左側若含 | 管線，必須用 () 包住整個表達式
+    anti_patterns:
+      - "在含 | 的表達式中不加括號直接用 //"
+      - "以為 .a | .b // .c | .d 是 (.a | .b) // (.c | .d)"
+
+  # --- Boundary Scenarios ---
+
+  - id: boundary-claude-headless-cost-control
+    name: "[Boundary] Claude headless 成本控制組合技"
+    difficulty: hard
+    context: |
+      你要寫一個 cron job 每小時分析 log 檔，但擔心成本失控。
+      需求：限制每次最多花 $0.50、只允許 Read 和 Grep 工具、
+      用 Haiku 模型、output 要 JSON 格式。
+    expected_behavior: |
+      - 使用 `--max-budget-usd 0.50` 成本上限
+      - 使用 `--tools "Read,Grep"` 或 `--disallowedTools "Edit,Write,Bash"` 限制工具
+      - 使用 `--model haiku` 或 `claude-haiku-4-5`
+      - 使用 `--output-format json` 搭配 `jq -r '.result'`
+      - 提到 `unset CLAUDECODE` 和 `--no-session-persistence`（CI/CD 環境）
+    anti_patterns:
+      - "忘記 --max-budget-usd（成本無上限）"
+      - "不限制工具就讓 AI 自由使用（安全風險）"
+
+  - id: boundary-launchd-vs-cron-keychain
+    name: "[Boundary] launchd vs cron 的 Keychain 存取差異"
+    difficulty: hard
+    context: |
+      用戶的 shell script 需要在排程中執行 `claude -p` 命令。
+      在終端機手動跑正常，但設成 cron 後 claude 報 authentication 錯誤。
+    expected_behavior: |
+      - 診斷：cron 沒有 Keychain 存取權限，claude CLI 的 OAuth token 存在 Keychain
+      - 解法：改用 launchd（~/Library/LaunchAgents/ plist）
+      - plist 必須設定 EnvironmentVariables PATH 包含 ~/.local/bin
+      - 提到 RunAtLoad / StartCalendarInterval 排程方式
+    anti_patterns:
+      - "建議在 cron 中設定 ANTHROPIC_API_KEY（繞過問題但不安全）"
+      - "不提 Keychain 存取是根本原因"
+      - "建議用 crontab -e 加 PATH 就能解決"
+
+  - id: boundary-tmpfile-trap-cleanup
+    name: "[Boundary] tmpfile 原子更新 — trap EXIT 清理"
+    difficulty: hard
+    context: |
+      你正在寫一個更新 state.json 的 shell script，使用 mktemp 做原子更新。
+      Script 中途可能因為 jq 錯誤或 kill 信號而中斷。
+      ```bash
+      #!/usr/bin/env zsh
+      set -euo pipefail
+      TMPFILE=$(mktemp)
+      jq '.key = "new_value"' state.json > "$TMPFILE" && mv "$TMPFILE" state.json
+      ```
+    expected_behavior: |
+      在 mktemp 後立即加 trap 確保 tmpfile 被清理：
+      TMPFILE=$(mktemp)
+      trap "rm -f $TMPFILE" EXIT
+      這樣無論 script 正常結束、發生錯誤或收到 kill 信號，tmpfile 都會被清理。
+      沒有 trap 的話，/tmp/ 中會累積未清理的 tmpfile（尤其 heartbeat 長期運行）。
+    anti_patterns:
+      - "只用 mktemp 但不加 trap EXIT，依賴 OS 自動清理"
+      - "在 script 末尾手動 rm $TMPFILE（中斷時不執行）"
+      - "用 trap 但只捕捉 ERR 不捕捉 EXIT"
+      - "把 trap 放在 mktemp 之前（TMPFILE 未定義時 trap 觸發會報錯）"

@@ -1,5 +1,9 @@
 # Homunculus for Claude Code
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.70+-blue)](https://docs.anthropic.com/en/docs/claude-code)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org)
+
 **Stop tuning your AI. Let it tune itself.**
 
 You spend hours tweaking prompts, writing rules, researching new features, configuring tools. Homunculus flips this: define your goals, and the system evolves itself — skills, agents, hooks, scripts, everything — while you focus on actual work.

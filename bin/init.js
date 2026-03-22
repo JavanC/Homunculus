@@ -80,11 +80,122 @@ async function main() {
   const purpose = await ask('  What is this project\'s main goal?', 'My evolving AI assistant');
 
   console.log('');
+  console.log('  Select areas you want your AI to improve in:');
+  console.log('');
+
+  const goalOptions = [
+    { key: '1', name: 'code_quality', label: 'Code Quality', desc: 'Ship fewer bugs, better tests' },
+    { key: '2', name: 'productivity', label: 'Productivity', desc: 'Complete tasks faster' },
+    { key: '3', name: 'debugging', label: 'Debugging', desc: 'Faster root cause analysis' },
+    { key: '4', name: 'documentation', label: 'Documentation', desc: 'Keep docs up to date' },
+    { key: '5', name: 'automation', label: 'Automation', desc: 'Automate repetitive work' },
+    { key: '6', name: 'learning', label: 'Continuous Learning', desc: 'Stay up to date with tools and patterns' },
+  ];
+
+  for (const opt of goalOptions) {
+    console.log(`    ${opt.key}. ${opt.label} — ${opt.desc}`);
+  }
+  console.log('');
+
+  const selectedStr = await ask('  Select areas (enter numbers, e.g. 1,2,5)', '1,2');
+  const selectedKeys = selectedStr.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+  const selectedGoals = goalOptions.filter(o => selectedKeys.includes(o.key));
+  if (selectedGoals.length === 0) selectedGoals.push(goalOptions[0], goalOptions[1]);
+
+  console.log('');
 
   const vars = {
     PROJECT_NAME: projectName,
     PROJECT_PURPOSE: purpose
   };
+
+  // Generate architecture.yaml from selected goals
+  function generateArchitecture(goals, rootPurpose) {
+    let yaml = `# architecture.yaml — Your goal tree\n`;
+    yaml += `# Goals are stable. Implementations evolve.\n`;
+    yaml += `# See: https://github.com/JavanC/Homunculus\n\n`;
+    yaml += `version: "1.0"\n\n`;
+    yaml += `root:\n`;
+    yaml += `  purpose: "${rootPurpose}"\n\n`;
+    yaml += `  goals:\n`;
+
+    const goalTemplates = {
+      code_quality: {
+        purpose: 'Ship fewer bugs, write more maintainable code',
+        goals: {
+          testing: { purpose: 'Every change has tests', realized_by: '# will evolve' },
+          review: { purpose: 'Catch issues before merge', realized_by: '# will evolve' }
+        },
+        metrics: [{ name: 'test_pass_rate', healthy: '> 90%' }]
+      },
+      productivity: {
+        purpose: 'Complete tasks faster with fewer iterations',
+        goals: {
+          task_completion: { purpose: 'Finish tasks in fewer cycles', realized_by: '# will evolve' },
+          tool_mastery: { purpose: 'Use the right tool on first try', realized_by: '# will evolve' }
+        },
+        metrics: [{ name: 'avg_iterations_per_task', healthy: 'decreasing trend' }]
+      },
+      debugging: {
+        purpose: 'Find and fix bugs faster',
+        goals: {
+          root_cause: { purpose: 'Identify root causes, not symptoms', realized_by: '# will evolve' },
+          diagnosis_tools: { purpose: 'Use the right debugging approach', realized_by: '# will evolve' }
+        },
+        metrics: [{ name: 'avg_debug_time', healthy: 'decreasing trend' }]
+      },
+      documentation: {
+        purpose: 'Keep documentation accurate and up to date',
+        goals: {
+          api_docs: { purpose: 'API docs match implementation', realized_by: '# will evolve' },
+          decision_records: { purpose: 'Document why, not just what', realized_by: '# will evolve' }
+        },
+        metrics: [{ name: 'doc_freshness', healthy: '< 1 week behind code' }]
+      },
+      automation: {
+        purpose: 'Automate repetitive work',
+        goals: {
+          ci_cd: { purpose: 'Automated build, test, deploy', realized_by: '# will evolve' },
+          workflows: { purpose: 'Common sequences as one command', realized_by: '# will evolve' }
+        },
+        metrics: [{ name: 'manual_steps_per_deploy', healthy: '< 3' }]
+      },
+      learning: {
+        purpose: 'Stay up to date with tools and best practices',
+        goals: {
+          tool_updates: { purpose: 'Track and adopt useful updates', realized_by: '# will evolve' },
+          pattern_discovery: { purpose: 'Find better ways to do things', realized_by: '# will evolve' }
+        },
+        metrics: [{ name: 'patterns_adopted_per_month', healthy: '> 2' }]
+      }
+    };
+
+    for (const goal of goals) {
+      const tmpl = goalTemplates[goal.name];
+      if (!tmpl) continue;
+      yaml += `    ${goal.name}:\n`;
+      yaml += `      purpose: "${tmpl.purpose}"\n`;
+      if (tmpl.metrics) {
+        yaml += `      metrics:\n`;
+        for (const m of tmpl.metrics) {
+          yaml += `        - name: ${m.name}\n`;
+          yaml += `          healthy: "${m.healthy}"\n`;
+        }
+      }
+      if (tmpl.goals) {
+        yaml += `      goals:\n`;
+        for (const [subName, sub] of Object.entries(tmpl.goals)) {
+          yaml += `        ${subName}:\n`;
+          yaml += `          purpose: "${sub.purpose}"\n`;
+          yaml += `          realized_by: ${sub.realized_by}\n`;
+        }
+      }
+      yaml += `\n`;
+    }
+
+    yaml += `    # Add more goals as your system evolves...\n`;
+    return yaml;
+  }
 
   // 1. Create directory structure
   const dirs = [
@@ -104,14 +215,12 @@ async function main() {
   }
   console.log('  \x1b[32m✓\x1b[0m Created homunculus/ directory structure');
 
-  // 2. Copy architecture template
+  // 2. Generate architecture.yaml from selected goals
   const archDest = path.join(projectDir, 'architecture.yaml');
   if (!fs.existsSync(archDest)) {
-    const template = fs.readFileSync(
-      path.join(TEMPLATES_DIR, 'architecture.template.yaml'), 'utf8'
-    );
-    fs.writeFileSync(archDest, replaceTemplateVars(template, vars));
-    console.log('  \x1b[32m✓\x1b[0m Created architecture.yaml (edit this to define your goals)');
+    const archContent = generateArchitecture(selectedGoals, purpose);
+    fs.writeFileSync(archDest, archContent);
+    console.log(`  \x1b[32m✓\x1b[0m Created architecture.yaml with ${selectedGoals.length} goals: ${selectedGoals.map(g => g.label).join(', ')}`);
   } else {
     console.log('  \x1b[33m-\x1b[0m architecture.yaml already exists, skipping');
   }

@@ -1,0 +1,886 @@
+# architecture.yaml — Goal-oriented system manifest
+# Each node is a GOAL, not a system. Systems are means to achieve goals.
+# Used by evolution system: assess each goal independently,
+# find better implementations, evaluate new research against goals.
+#
+# Node schema:
+#   purpose:      Why this goal exists (serves which parent goal)
+#   realized_by:  What implements it (path, system, or description)
+#   metrics:      How to measure success [{name, source, healthy}]
+#   tests:        Leaf-level verification [test file patterns]
+#   goals:        Sub-goals (recursive)
+#   agents:       Subagents that serve this goal [{name, role, trigger}]
+#                 - name:    agent definition filename (without .md)
+#                 - role:    "specialist" (spawned on demand) | "autonomous" (cron/heartbeat triggered)
+#                 - trigger: what causes this agent to run
+#   health_check: Machine-executable health verification
+#                 - command:  shell command to run (exit 0 = healthy)
+#                 - expected: human-readable description of healthy state
+#                 Used by /harness-audit to scan all goals programmatically.
+#
+# ADR: When making significant changes (add/remove goals, change realized_by,
+#      restructure agents), write an ADR to decisions/YYYY-MM-DD-title.yaml.
+#      Use scripts/goal-impact.sh to check affected goals before changing.
+#
+# Last updated: 2026-03-20
+
+version: "2.2"
+
+# ═══════════════════════════════════════════════
+# Root: the single top-level aspiration
+# ═══════════════════════════════════════════════
+root:
+  purpose: "A personal AI assistant that continuously evolves and acts autonomously"
+  goals:
+
+    # ───────────────────────────────────────────
+    # 1. Autonomous Action
+    # ───────────────────────────────────────────
+    autonomous_action:
+      purpose: "Act without human trigger — scheduled tasks, proactive maintenance, research"
+      realized_by: heartbeat/ + shell-automation-patterns skill
+
+      goals:
+        scheduled_dispatch:
+          purpose: "Time-aware task routing (day checks vs night agent)"
+          realized_by: heartbeat/heartbeat.sh + heartbeat/tests/heartbeat.test.sh + /api/sleep (sleep-flag trigger) + /api/night-status + /api/bedtime-preview
+          metrics:
+            - name: dispatch_accuracy
+              source: heartbeat/logs/heartbeat.log
+              healthy: "correct mode selected (day/night) 100%"
+
+        night_research:
+          purpose: "Autonomous knowledge acquisition during idle hours"
+          realized_by: heartbeat/prompts/p2.md + .envrc (direnv worktree isolation)
+          goals:
+            topic_discovery:
+              purpose: "Find relevant research topics from news, HN, blogs"
+              realized_by: heartbeat/prompts/p2.md
+              metrics:
+                - name: topics_per_night
+                  source: heartbeat/data/night-report.md
+                  healthy: ">= 3"
+            structured_reporting:
+              purpose: "Convert raw research into actionable 6-section report"
+              realized_by: heartbeat/scripts/summarize-night.sh
+              metrics:
+                - name: report_completeness
+                  source: heartbeat/data/night-report.md
+                  healthy: "all 6 sections present"
+            action_generation:
+              purpose: "Propose concrete next steps from research findings"
+              realized_by: heartbeat/prompts/shared.md (建議行動 guidelines)
+              metrics:
+                - name: suggestion_adopt_rate
+                  source: quest-board state.json (suggested tasks confirmed vs dismissed)
+                  healthy: ">= 50%"
+
+        system_maintenance:
+          purpose: "Keep infrastructure healthy without human intervention"
+          realized_by: heartbeat/checks/ + heartbeat/checks/harness-audit.sh (weekly)
+          agents:
+            - name: shell-debugger
+              role: specialist
+              trigger: "shell script failure or unexpected output"
+          goals:
+            server_monitoring:
+              purpose: "Detect and report quest-board server issues"
+              realized_by: heartbeat/checks/server-health.sh
+              health_check:
+                command: "curl -sf http://localhost:3000/api/health | jq -e .ok"
+                expected: "quest-board responds 200 with {ok:true}"
+              metrics:
+                - name: server_uptime
+                  source: /api/health
+                  healthy: "responds 200"
+            stats_snapshots:
+              purpose: "Daily data capture for trend analysis"
+              realized_by: heartbeat/checks/system-maintenance.sh
+              health_check:
+                command: "ls ~/assistant/quest-board/data/stats-history/$(date +%Y-%m-%d)*.json 2>/dev/null | head -1"
+                expected: "today's snapshot file exists"
+              metrics:
+                - name: snapshot_freshness
+                  source: quest-board/data/stats-history/
+                  healthy: "snapshot exists for today"
+            search_index:
+              purpose: "Keep QMD knowledge base current"
+              realized_by: heartbeat/checks/system-maintenance.sh (qmd update+embed)
+              metrics:
+                - name: index_age
+                  source: qmd status
+                  healthy: "< 24h"
+            log_rotation:
+              purpose: "Prevent unbounded log growth"
+              realized_by: heartbeat/checks/system-maintenance.sh
+              metrics:
+                - name: log_size
+                  source: heartbeat/logs/
+                  healthy: "< 10MB per file"
+
+        scheduled_projects:
+          purpose: "Autonomous periodic projects that enrich user context"
+          realized_by: projects/
+          goals:
+            ai_trading_strategies:
+              purpose: "Scheduled autonomous strategy evolution runs"
+              realized_by: projects/ai-trading-strategies/evolve.sh (launchd)
+              # Full project details: personal_growth.active_projects.ai_trading_strategies
+              health_check:
+                command: "ls ~/assistant/projects/ai-trading-strategies/reports/$(date +%Y-%m-%d)-*.md 2>/dev/null | head -1"
+                expected: "today's strategy report exists"
+
+        daily_news:
+          purpose: "Curate and deliver daily news digest from multiple sources"
+          realized_by: daily-news/
+          goals:
+            source_collection:
+              purpose: "Gather news from RSS, Twitter, Gmail newsletters"
+              realized_by: daily-news/sources/ (twitter.sh, rss-feeds.sh, gmail-newsletters.sh)
+              metrics:
+                - name: source_count
+                  source: daily-news/config.json
+                  healthy: ">= 3 active sources"
+            summarization:
+              purpose: "AI-summarize collected items into readable digest"
+              realized_by: daily-news/run.sh + daily-news/prompt.md
+              metrics:
+                - name: digest_freshness
+                  source: daily-news/data/latest-summary.md
+                  healthy: "generated within 24h"
+            twitter_prefetch:
+              purpose: "Pre-cache Twitter data for faster digest generation"
+              realized_by: daily-news/sources/twitter.sh prefetch (launchd)
+
+        notifications:
+          purpose: "Push timely reminders and reports to user"
+          realized_by: heartbeat/checks/
+          goals:
+            task_reminders:
+              purpose: "Remind incomplete daily tasks at key hours"
+              realized_by: heartbeat/checks/quest-reminder.sh
+              metrics:
+                - name: reminder_timing
+                  source: heartbeat/logs/heartbeat.log
+                  healthy: "fires at 12/18/22h"
+            morning_report:
+              purpose: "Deliver night research results at wake time"
+              realized_by: heartbeat/checks/night-report.sh
+              metrics:
+                - name: report_delivered
+                  source: Discord channel
+                  healthy: "pushed by 08:30"
+
+    # ───────────────────────────────────────────
+    # 2. Continuous Evolution
+    # ───────────────────────────────────────────
+    continuous_evolution:
+      purpose: "Learn from every interaction and improve over time"
+      realized_by: homunculus/ + .claude/rules/evolution-system.md
+
+      goals:
+        behavior_observation:
+          purpose: "Capture raw tool usage patterns for later analysis"
+          realized_by: scripts/observe.sh
+          metrics:
+            - name: observation_rate
+              source: homunculus/observations.jsonl
+              healthy: "> 0 entries per session"
+
+        pattern_extraction:
+          purpose: "Distill observations into reusable behavioral patterns"
+          realized_by: scripts/evaluate-session.js + /learn + /learn-eval + /instinct-status commands
+          health_check:
+            command: "count=$(ls ~/assistant/homunculus/instincts/personal/*.md 2>/dev/null | wc -l); [ $count -ge 30 ] && [ $count -le 90 ]"
+            expected: "active instincts between 30-90"
+          metrics:
+            - name: active_instincts
+              source: homunculus/instincts/personal/
+              healthy: "30-90 (not too few, not bloated)"
+            - name: extraction_precision
+              source: instinct adoption (not immediately archived)
+              healthy: "> 80% survive 7 days"
+
+        skill_aggregation:
+          purpose: "Merge related instincts into tested, versioned skills"
+          realized_by: /evolve command + homunculus/evolved/skills/
+          health_check:
+            command: "count=$(ls ~/assistant/homunculus/evolved/skills/*.md 2>/dev/null | wc -l); [ $count -ge 5 ]"
+            expected: "at least 5 evolved skills exist"
+          metrics:
+            - name: skill_count
+              source: homunculus/evolved/skills/
+              healthy: ">= 5"
+            - name: avg_pass_rate
+              source: homunculus/evolved/evals/history.jsonl
+              healthy: ">= 90%"
+
+        eval_and_improve:
+          purpose: "Verify skill quality and iteratively improve"
+          realized_by: /eval-skill + /improve-skill commands + data/eval-config.json (auto-tuning)
+          metrics:
+            - name: eval_coverage
+              source: homunculus/evolved/evals/
+              healthy: "every skill has eval spec"
+            - name: improvement_convergence
+              source: homunculus/evolved/evals/history.jsonl
+              healthy: "reaches 100% within 5 rounds"
+            - name: eval_discrimination
+              source: homunculus/evolved/evals/history.jsonl
+              healthy: "> 30% (trend indicator — differences < 3pp not statistically significant)"
+              current: "30.3% (10/33)"
+
+        stale_cleanup:
+          purpose: "Remove outdated knowledge to keep signal-to-noise high"
+          realized_by: stats.js (stale_instincts/stale_memories) + scripts/prune-instincts.js + heartbeat guidance
+          metrics:
+            - name: stale_instinct_ratio
+              source: /api/stats/references
+              healthy: "< 15%"
+            - name: stale_memory_ratio
+              source: /api/stats/references
+              healthy: "< 10%"
+          tests:
+            - quest-board/tests/r130.test.js
+
+        data_driven_decisions:
+          purpose: "Ground evolution choices in quantitative evidence"
+          realized_by: quest-board/stats.js + scripts/evolution-weekly-report.sh (launchd)
+          goals:
+            statistics_aggregation:
+              purpose: "Collect multi-source metrics into unified dashboard"
+              realized_by: quest-board/stats.js → /api/stats
+              tests:
+                - quest-board/tests/r91.test.js
+            trend_analysis:
+              purpose: "Compare current vs historical to detect drift"
+              realized_by: quest-board/stats.js → /api/stats/trends
+              metrics:
+                - name: trend_data_points
+                  source: quest-board/data/stats-history/
+                  healthy: ">= 7 daily snapshots"
+            reference_tracking:
+              purpose: "Know which knowledge is actually being used"
+              realized_by: scripts/observe.sh → data/reference-tracking.jsonl → /api/stats/references
+              tests:
+                - quest-board/tests/r130.test.js
+                - quest-board/tests/r136.test.js
+
+        experimentation:
+          purpose: "Test hypotheses safely before adopting changes"
+          realized_by: homunculus/experiments/ + /experiment command + git worktrees + .envrc
+          metrics:
+            - name: experiment_rate
+              source: homunculus/experiments/history.jsonl
+              healthy: ">= 1 per week"
+            - name: experiment_pass_rate
+              source: homunculus/experiments/history.jsonl
+              healthy: ">= 60%"
+
+        agent_evolution:
+          purpose: "Evolve subagent definitions based on performance data"
+          realized_by: homunculus/evolved/agents/ + /api/subagent/track + /api/subagent/stats
+          goals:
+            agent_registry:
+              purpose: "Track all agents with version, alignment, and metrics"
+              realized_by: homunculus/evolved/agents/ (metadata in frontmatter) + scripts/sync-agent-config.js (symlinks)
+            agent_evaluation:
+              purpose: "Verify agent effectiveness against defined scenarios"
+              realized_by: homunculus/evolved/evals/agents/ (placeholder — eval specs not yet written)
+            agent_optimization:
+              purpose: "Auto-adjust prompt/model/tools based on performance stats"
+              realized_by: /api/subagent/stats recommendations + heartbeat
+
+    # ───────────────────────────────────────────
+    # 3. Memory & Knowledge
+    # ───────────────────────────────────────────
+    memory_and_knowledge:
+      purpose: "Retain and retrieve relevant information across sessions"
+      agents:
+        - name: assistant-explorer
+          role: specialist
+          trigger: "exploring ~/assistant directory structure, checking system state"
+
+      goals:
+        cross_session_persistence:
+          purpose: "Remember user context, decisions, and preferences between conversations"
+          realized_by: ~/.claude/projects/-Users-jinx-assistant/memory/
+          metrics:
+            - name: memory_index_size
+              source: MEMORY.md
+              healthy: "< 200 lines"
+            - name: memory_freshness
+              source: MEMORY.md last-modified
+              healthy: "updated within 7 days"
+
+        semantic_search:
+          purpose: "Find relevant knowledge by meaning, not just keywords"
+          realized_by: QMD v2.0.1 (Bun, 6 collections, MCP server) + context7 MCP + scripts/qmd-contextual-enrichment.sh + data/lenny-data/
+          metrics:
+            - name: indexed_docs
+              source: qmd status
+              healthy: "> 100"
+            - name: search_relevance
+              source: manual assessment
+              healthy: "top-3 results contain answer > 80%"
+
+        memory_quality:
+          purpose: "Ensure stored memories are accurate, current, and well-organized"
+          realized_by: stats.js (memory_ranking) + heartbeat guidance
+          goals:
+            ranking_and_reorg:
+              purpose: "Surface frequently-used memories, sink stale ones"
+              realized_by: /api/stats/references → memory_ranking
+              tests:
+                - quest-board/tests/r136.test.js
+            staleness_detection:
+              purpose: "Flag memories that reference outdated information"
+              realized_by: quest-board/stats.js (stale_memories) + heartbeat guidance
+              metrics:
+                - name: outdated_memory_count
+                  source: /api/stats/references (stale_memories)
+                  healthy: "0"
+
+        session_management:
+          purpose: "Track session history for pattern analysis and continuity"
+          realized_by: sessions/ + scripts/session-start.js + scripts/session-end.js
+          metrics:
+            - name: session_capture_rate
+              source: sessions/
+              healthy: "every session has summary"
+
+    # ───────────────────────────────────────────
+    # 4. Task Management
+    # ───────────────────────────────────────────
+    task_management:
+      purpose: "Track, prioritize, and complete work across all time horizons"
+      realized_by: quest-board/ + /todo command + .claude/rules/quest-system.md + .claude/rules/quest-board-api.md
+
+      goals:
+        daily_habits:
+          purpose: "Reinforce recurring positive behaviors with RPG rewards"
+          realized_by: /api/habit/* + state.json today.habits
+          tests:
+            - quest-board/tests/habit-api.test.js
+          metrics:
+            - name: daily_completion_rate
+              source: state.json
+              healthy: ">= 60%"
+
+        personal_quests:
+          purpose: "Track one-off personal tasks to completion"
+          realized_by: /api/quest/*
+          tests:
+            - quest-board/tests/quest-api.test.js
+
+        system_upgrades:
+          purpose: "Structured development workflow for system improvements"
+          realized_by: /api/forge/* + /api/forge/confirm + /api/forge/dismiss + /forge-dev command
+          tests:
+            - quest-board/tests/forge-api.test.js
+            - quest-board/tests/forge-advanced-api.test.js
+          metrics:
+            - name: forge_completion_rate
+              source: /api/stats/forge
+              healthy: ">= 50%"
+            - name: review_pass_rate
+              source: /api/forge/metrics
+              healthy: ">= 80%"
+
+        focus_timer:
+          purpose: "Pomodoro-style focus sessions for time-boxed work"
+          realized_by: /api/timer (GET/POST/DELETE) + quest-board/data/timer.json
+
+        daily_refresh:
+          purpose: "Reset daily habits and clean up ephemeral state each morning"
+          realized_by: quest-board/refresh.sh (launchd)
+
+        stats_and_insights:
+          purpose: "Aggregate cross-system metrics for informed decisions"
+          realized_by: quest-board/stats.js
+          tests:
+            - quest-board/tests/r91.test.js
+            - quest-board/tests/r92.test.js
+
+    # ───────────────────────────────────────────
+    # 5. Communication
+    # ───────────────────────────────────────────
+    communication:
+      purpose: "Interact with user through multiple channels and modalities"
+
+      goals:
+        discord:
+          purpose: "Real-time text communication with per-topic context"
+          realized_by: bridge/ (Go)
+          goals:
+            multi_channel_chat:
+              purpose: "Per-channel conversations with dedicated system prompts"
+              realized_by: bridge/ + config.toml (per-channel system_prompt_file)
+              health_check:
+                command: "pgrep -f 'assistant/bridge/bridge' > /dev/null"
+                expected: "discord bridge process is running"
+              metrics:
+                - name: bridge_uptime
+                  source: bridge process
+                  healthy: "running"
+                - name: channel_count
+                  source: bridge/config.toml
+                  healthy: ">= 5"
+            remote_control:
+              purpose: "Accept and execute commands via Discord messages"
+              realized_by: bridge/core/engine.go (RC sessions) + claude-rc-wrapper.sh (launchd)
+              metrics:
+                - name: rc_response_time
+                  source: Discord timestamps
+                  healthy: "< 30s"
+            url_summarization:
+              purpose: "Auto-summarize URLs shared in chat"
+              realized_by: bridge/core/engine.go (Haiku + WebFetch)
+              metrics:
+                - name: summarization_success
+                  source: bridge logs
+                  healthy: "> 90%"
+            notification_delivery:
+              purpose: "Push system notifications (reminders, reports) to user"
+              realized_by: scripts/discord-alert.sh + Discord webhooks (called by heartbeat checks)
+              metrics:
+                - name: delivery_success
+                  source: heartbeat logs
+                  healthy: "> 95%"
+
+        dashboard:
+          purpose: "Visual status overview — make system state glanceable"
+          realized_by: quest-board/web/
+          goals:
+            task_visualization:
+              purpose: "Show habits, quests, forge tasks in RPG-style interface"
+              realized_by: quest-board/web/app.js
+              metrics:
+                - name: dashboard_uptime
+                  source: /api/health
+                  healthy: "responds 200"
+            progress_feedback:
+              purpose: "Make progress tangible through XP, levels, stats"
+              realized_by: quest-board/web/ (player panel)
+            stats_dashboard:
+              purpose: "Surface evolution health, trends, recommendations"
+              realized_by: quest-board/web/ (report tab) + onui MCP + /api/skills + /api/instinct/:id + /api/news + /api/night-report
+
+        cli:
+          purpose: "Direct terminal interaction for development and system work"
+          realized_by: Claude Code CLI + .claude/settings.json hooks + claude-code-reference skill + /tips command + Notification(idle_prompt) hook + data/hook-profile-config.json + .claude/rules/core-patterns.md + .claude/rules/claude-code-features.md
+          goals:
+            session_lifecycle:
+              purpose: "Initialize and finalize sessions with proper state management"
+              realized_by: scripts/session-start.js (SessionStart) + scripts/session-end.js (Stop) + scripts/auto-commit.sh (Stop)
+            behavior_hooks:
+              purpose: "Observe tool usage and suggest optimizations in real-time"
+              realized_by: scripts/observe.sh (PreToolUse/PostToolUse) + scripts/suggest-compact.sh (PreToolUse Edit|Write)
+            context_hooks:
+              purpose: "Preserve and restore context across compactions"
+              realized_by: scripts/pre-compact.sh (PreCompact) + scripts/post-compact.sh (PostCompact)
+            instruction_tracking:
+              purpose: "Track which CLAUDE.md/rules files are loaded per session"
+              realized_by: scripts/observe-instructions.sh (InstructionsLoaded)
+          metrics:
+            - name: hook_error_rate
+              source: hook execution logs
+              healthy: "0 errors"
+
+    # ───────────────────────────────────────────
+    # 6. Resource Awareness
+    # ───────────────────────────────────────────
+    resource_awareness:
+      purpose: "Know what resources are available and use them efficiently"
+
+      goals:
+        api_budget:
+          purpose: "Ensure must-do tasks always run; use remaining budget for research and experiments"
+          # Design philosophy (Claude Code Max subscription):
+          #   - P0+P1 are non-negotiable — always run even over budget
+          #   - P2 research + P3 experiments scale with available budget
+          #   - No hard USD limits; Claude Code behaves well enough
+          #   - Cross-tick budget awareness: later ticks detect increased budget
+          realized_by: heartbeat/heartbeat.sh (budget logic) + quest-board/data/usage-cache.json
+          metrics:
+            - name: weekly_usage
+              source: /api/usage
+              healthy: "within weekly budget curve (hours_into_week * 100 / 168 + 5%)"
+            - name: must_do_completion
+              source: heartbeat/data/night-report.md
+              healthy: "P0+P1 complete every night regardless of budget"
+          goals:
+            usage_tracking:
+              purpose: "Real-time visibility into API consumption"
+              realized_by: heartbeat/check-usage.js + quest-board/data/usage-cache.json
+            night_budget_scaling:
+              purpose: "MP/HP dual-layer budget: MP(5h hard limit) + HP(7d soft budget) → BUDGET_LEVEL label"
+              realized_by: heartbeat/heartbeat.sh (check_usage_budget + should_skip_phase)
+              # MP>=90% → mp_empty(skip tick), HP remaining<0 → skip, <2% → half, >=2% → full
+            cross_tick_progress:
+              purpose: "Resume phase pipeline across heartbeat ticks"
+              realized_by: heartbeat/data/night-progress.json (phases_completed/skipped/failed)
+
+        compute:
+          purpose: "Utilize local hardware effectively (MacBook Air, full machine access)"
+          realized_by: macOS + launchd + local processes + mac-use MCP
+          goals:
+            local_services:
+              purpose: "Manage always-on local services"
+              realized_by: launchd (heartbeat, bridge, quest-board, daily-news, trading, jarvis-dashboard, cloudflared) + node
+              metrics:
+                - name: service_count
+                  source: launchctl list
+                  healthy: "heartbeat + bridge running"
+            background_execution:
+              purpose: "Run long tasks without blocking user interaction"
+              realized_by: tmux + background agents + launchd
+              metrics:
+                - name: resource_utilization
+                  source: system metrics
+                  healthy: "CPU < 80% sustained"
+
+        accounts:
+          purpose: "Leverage external service accounts for expanded capabilities"
+          goals:
+            email:
+              purpose: "Send/receive email on behalf of user"
+              realized_by: "gog gmail (starpincer@gmail.com)"
+              metrics:
+                - name: email_accessible
+                  source: "gog gmail list --max 1"
+                  healthy: "responds without error"
+            github:
+              purpose: "Manage repos, PRs, issues"
+              realized_by: "gh CLI"
+              metrics:
+                - name: gh_authenticated
+                  source: "gh auth status"
+                  healthy: "logged in"
+            social:
+              purpose: "Post and read social media (Twitter/X)"
+              realized_by: planned (Twitter/X account access)
+              metrics:
+                - name: social_accessible
+                  source: planned
+                  healthy: "can post and read"
+            discord:
+              purpose: "Bot account for bridge communication"
+              realized_by: bridge/config.toml (bot token)
+              metrics:
+                - name: bot_connected
+                  source: bridge process
+                  healthy: "connected to gateway"
+
+        storage:
+          purpose: "Manage disk space and data lifecycle"
+          realized_by: macOS filesystem
+          metrics:
+            - name: disk_free
+              source: "df -h"
+              healthy: "> 10GB free"
+            - name: git_repo_size
+              source: "du -sh ~/assistant/.git"
+              healthy: "< 500MB"
+
+    # ───────────────────────────────────────────
+    # 7. Development Quality
+    # ───────────────────────────────────────────
+    development_quality:
+      purpose: "Ensure changes are safe, tested, and automatically tracked"
+      realized_by: api-system-diagnosis skill
+
+      goals:
+        test_infrastructure:
+          purpose: "Fast, isolated, reliable test suite for quest-board"
+          realized_by: quest-board/tests/ + tdd-workflow skill
+          agents:
+            - name: tdd-runner
+              role: specialist
+              trigger: "forge-dev gen-tests / forge-dev start"
+          health_check:
+            command: "cd $HOME/assistant/quest-board && node --experimental-test-isolation=none --test --test-concurrency=1 $(ls tests/*.test.js) 2>&1 | grep -q '# fail 0'"
+            expected: "all quest-board tests pass (0 failures)"
+          metrics:
+            - name: test_count
+              source: quest-board/tests/*.test.js
+              healthy: ">= 99"
+            - name: pass_rate
+              source: test runner output
+              healthy: "100%"
+            - name: execution_time
+              source: test runner output
+              healthy: "< 10s"
+          tests:
+            - quest-board/tests/smoke.test.js
+
+        quality_gates:
+          purpose: "Pre-flight checks before risky operations"
+          realized_by: /quality-gate command
+          metrics:
+            - name: gate_bypass_rate
+              source: manual observation
+              healthy: "0%"
+
+        auto_versioning:
+          purpose: "Track all evolution changes in git automatically"
+          realized_by: scripts/auto-commit.sh
+          metrics:
+            - name: uncommitted_evolution_files
+              source: git status
+              healthy: "0"
+
+        context_management:
+          purpose: "Maintain healthy context window throughout sessions"
+          realized_by: scripts/suggest-compact.sh + scripts/pre-compact.sh
+          metrics:
+            - name: compact_data_loss
+              source: manual observation
+              healthy: "0 critical state lost"
+
+    # ───────────────────────────────────────────
+    # 8. Operational Intelligence
+    # ───────────────────────────────────────────
+    operational_intelligence:
+      purpose: "Choose the right action pattern for any given context"
+      realized_by: homunculus/evolved/skills/workflows.md
+
+      goals:
+        workflow_selection:
+          purpose: "Match incoming request to the correct workflow (research/dev/debug/review/...)"
+          realized_by: homunculus/evolved/skills/workflows.md (7 workflows + exclusion rules)
+          metrics:
+            - name: workflow_eval_pass_rate
+              source: homunculus/evolved/evals/workflows.eval.yaml
+              healthy: ">= 90%"
+            - name: wrong_workflow_rate
+              source: manual observation
+              healthy: "< 5%"
+
+        workflow_adaptation:
+          purpose: "Automatically adjust workflows based on usage data (skip rates, failure patterns)"
+          realized_by: "/api/workflow/track + /api/workflow/stats (recommendations: skip_rate > 50% triggers make_optional/remove)"
+          metrics:
+            - name: step_skip_rate
+              source: /api/workflow/stats
+              healthy: "no step skipped > 50% of the time"
+
+        context_routing:
+          purpose: "Route requests to appropriate tools, models, and subagents"
+          realized_by: CLAUDE.md model guidelines + subagent definitions + multi-agent-design-patterns skill
+          metrics:
+            - name: model_appropriateness
+              source: observations.jsonl (model usage vs task complexity)
+              healthy: "Sonnet ~90%, Opus ~8%, Haiku ~2%"
+
+        process_governance:
+          purpose: "Enforce quality gates and verification loops at the right moments"
+          realized_by: /quality-gate + /forge-dev + development-verification-patterns skill
+          metrics:
+            - name: gate_compliance
+              source: forge review pass_rate
+              healthy: ">= 80%"
+
+    # ───────────────────────────────────────────
+    # 9. Self-Awareness (meta)
+    # ───────────────────────────────────────────
+    self_awareness:
+      purpose: "Understand own architecture to make safe, informed evolution decisions"
+      realized_by: architecture.yaml (this file) + assistant-system-management skill
+      metrics:
+        - name: architecture_freshness
+          source: architecture.yaml last-modified
+          healthy: "reflects current system state"
+      goals:
+        goal_assessment:
+          purpose: "Evaluate each goal's health and find improvement opportunities"
+          realized_by: scripts/goal-health-check.sh + scripts/architecture-orphan-check.sh + /harness-audit + /health commands + quest-board/stats.js (computeEvolutionMetrics)
+          metrics:
+            - name: goals_with_metrics
+              source: architecture.yaml
+              healthy: "> 80% of leaf goals have metrics"
+        impact_analysis:
+          purpose: "Before changing a system, understand what goals it affects"
+          realized_by: scripts/goal-impact.sh + decisions/ (ADR)
+          metrics:
+            - name: safe_change_rate
+              source: git history (reverts, hotfixes)
+              healthy: "< 5% changes reverted"
+        architecture_review_triggers:
+          purpose: "Detect when incremental optimization is insufficient and architecture-level redesign is needed"
+          realized_by: scripts/architecture-review-triggers.sh + heartbeat/prompts/p1.md (Section G)
+          metrics:
+            - name: trigger_detection
+              source: scripts/architecture-review-triggers.sh output
+              healthy: "triggers are detected and surfaced in night report suggestions"
+
+    # ───────────────────────────────────────────
+    # 10. Personal Growth
+    # ───────────────────────────────────────────
+    personal_growth:
+      purpose: "Build knowledge and capabilities that lead to meaningful projects"
+
+      goals:
+        knowledge_base:
+          purpose: "Zettelkasten knowledge graph with typed connections and structure notes"
+          realized_by: knowledge-cards/ + scripts/build-index.js + /study command + .claude/rules/knowledge-management.md
+          metrics:
+            - name: card_count
+              source: knowledge-cards/index.json stats.total_cards
+              healthy: ">= 10"
+            - name: domain_coverage
+              source: knowledge-cards/index.json stats.domains
+              healthy: ">= 3 domains"
+            - name: connection_density
+              source: knowledge-cards/index.json stats.avg_connections
+              healthy: ">= 2.0 links/card"
+            - name: structure_note_count
+              source: knowledge-cards/index.json stats.total_structure_notes
+              healthy: ">= 3"
+            - name: orphan_count
+              source: knowledge-cards/index.json stats.orphans
+              healthy: "0"
+          health_check:
+            command: "cd ~/assistant/knowledge-cards && node scripts/build-index.js 2>&1 | grep -q 'index.json built'"
+            expected: "build-index.js runs successfully and produces index.json"
+
+        project_pipeline:
+          purpose: "From knowledge intersection to active project proposals"
+          realized_by: knowledge-cards/ connections + /create-project command
+          metrics:
+            - name: candidate_review_rate
+              source: knowledge-cards/candidates/
+              healthy: "candidates reviewed within 3 days"
+
+        active_projects:
+          purpose: "Track and advance projects that solve real problems"
+          realized_by: projects/
+          goals:
+            chapterly:
+              purpose: "iOS novel reading app — solve poor reading experience on mobile"
+              realized_by: projects/chapterly/
+              metrics:
+                - name: project_status
+                  source: projects/chapterly/plan.md
+                  healthy: "milestones defined and tracked"
+              # Knowledge cards: reading-app-pain-point × ios-app-development
+
+            ai_trading_strategies:
+              purpose: "AI autonomous strategy discovery — no predefined indicators, evolve and validate"
+              realized_by: projects/ai-trading-strategies/
+              metrics:
+                - name: report_freshness
+                  source: projects/ai-trading-strategies/reports/
+                  healthy: "report generated within 24h"
+                - name: strategy_evolution
+                  source: projects/ai-trading-strategies/
+                  healthy: "backtest + evolution loop operational"
+              # Knowledge cards: ai-strategy-evolution × binance-api × tradingview-api × blockchain-defi-experience
+              # Also under: autonomous_action.scheduled_projects (scheduling)
+
+            manual_trading_strategies:
+              purpose: "Human hypothesis-driven strategy backtesting with custom indicators and position sizing"
+              realized_by: projects/manual-trading-strategies/
+              metrics:
+                - name: hypotheses_tested
+                  source: projects/manual-trading-strategies/README.md
+                  healthy: "at least 1 hypothesis backtested"
+              # Knowledge cards: binance-api × ai-crypto-analysis × tradingview-api
+              # Complements: ai_trading_strategies (AI zero-knowledge) vs this (human intuition)
+
+            ai_trading_executor:
+              purpose: "Paper/live trading — execute graduated strategies on real markets"
+              realized_by: projects/ai-trading-executor/ + launchd(trading-executor, trading-executor-daily)
+              metrics:
+                - name: scanner_active
+                  command: "launchctl print gui/501/com.jassistant.trading-executor 2>/dev/null | grep -q 'state = not running'"
+                  expected: "launchd job loaded"
+                - name: paper_trades
+                  source: projects/ai-trading-executor/data/trades/
+                  healthy: "paper trades being recorded"
+              # Knowledge cards: binance-api × ai-strategy-evolution × blockchain-defi-experience
+              # Depends on: ai_trading_strategies (graduated strategies)
+
+            self_evolution:
+              purpose: "Build a self-improving AI assistant system"
+              realized_by: projects/self-evolution/
+              metrics:
+                - name: plan_progress
+                  source: projects/self-evolution/plan.md
+                  healthy: "active milestones tracked"
+              # Knowledge cards: ai-self-evolution × ai-agent-tooling-gap
+
+            jarvis_dashboard:
+              purpose: "3D knowledge graph visualization — make system topology explorable"
+              realized_by: projects/jarvis-dashboard/ (launchd)
+              metrics:
+                - name: dashboard_running
+                  source: launchctl list com.jinx.jarvis-dashboard
+                  healthy: "process running"
+
+            homunculus_oss:
+              purpose: "Open-source self-evolving AI assistant + influence building"
+              realized_by: projects/homunculus/
+
+              goals:
+                open_source_repo:
+                  purpose: "Publish minimal seed repo with extreme low setup barrier"
+                  realized_by: GitHub repo homunculus + npx init
+                  metrics:
+                    - name: github_stars
+                      source: gh api repos/{owner}/homunculus
+                      healthy: "> 100 (Phase 1), > 1000 (Phase 2)"
+                    - name: setup_time
+                      source: manual test
+                      healthy: "< 5 minutes from clone to first evolution"
+
+                upstream_sync:
+                  purpose: "Keep homunculus repo updated with self-evolution improvements"
+                  realized_by: manual review + future automation script
+                  metrics:
+                    - name: sync_lag
+                      source: git diff between internal and public repo
+                      healthy: "< 2 weeks behind self-evolution core changes"
+
+                community:
+                  purpose: "Build and maintain developer community around homunculus"
+                  realized_by: GitHub discussions + Twitter + Reddit + blog + nightly community monitoring
+                  metrics:
+                    - name: weekly_content
+                      source: projects/homunculus/drafts/
+                      healthy: ">= 2 posts per week (auto-drafted by assistant)"
+                    - name: response_time
+                      source: GitHub issues
+                      healthy: "< 48h for first response"
+
+                influence:
+                  purpose: "Establish personal authority in AI deep-usage space"
+                  realized_by: content strategy + community engagement
+                  metrics:
+                    - name: twitter_followers
+                      source: Twitter/X profile
+                      healthy: "> 500 (Phase 2)"
+                    - name: hn_appearances
+                      source: nightly agent HN scan
+                      healthy: ">= 1 front page"
+
+                monetization:
+                  purpose: "Explore knowledge monetization paths based on audience feedback"
+                  realized_by: TBD (course / consulting / product / newsletter)
+                  # Status: Phase 3 — not started, depends on community traction
+
+            xiao_j_evolution:
+              purpose: "Phase 1 character evolution plan (archived — absorbed into self-evolution + knowledge-cards)"
+              realized_by: projects/xiao-j-evolution/
+              # Status: archived 2026-03-18
+
+
+# ═══════════════════════════════════════════════
+# Test runner configuration
+# ═══════════════════════════════════════════════
+test_config:
+  quest_board:
+    command: "node --experimental-test-isolation=none --test --test-concurrency=1 tests/*.test.js"
+    cwd: quest-board/
+    count: 125
+    expected_duration: "< 10s"

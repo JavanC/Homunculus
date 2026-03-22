@@ -1,0 +1,117 @@
+skill: development-verification-patterns
+version: "1.1"
+last_eval: "2026-03-19"
+pass_rate: 100
+total_scenarios: 8
+
+scenarios:
+  - id: multi-file-syntax-check
+    name: "多檔案修改後語法預檢"
+    context: |
+      修改了 server.js、app.js、heartbeat.sh 三個檔案，即將重啟服務。
+    expected_behavior: |
+      在重啟前執行：node -c server.js && node -c app.js && zsh -n heartbeat.sh
+      全部通過才繼續，有錯立即修正並重新驗證。
+    anti_patterns:
+      - "直接重啟服務而不先進行語法預檢"
+      - "只檢查部分修改的檔案"
+      - "語法錯誤後跳過修正繼續進行"
+
+  - id: cross-file-feature-removal
+    name: "跨檔案功能完整移除"
+    context: |
+      需要從 quest-board 移除天氣功能，涉及 index.html、app.js、server.js、refresh.sh。
+    expected_behavior: |
+      1. grep -r "weather" . 找出所有引用
+      2. 分層移除：HTML chip → app.js 事件 → server.js endpoint → refresh.sh 邏輯
+      3. grep "https" 確認是否孤立依賴，若是則移除 require('https')
+      4. node -c server.js && zsh -n refresh.sh 語法驗證
+      5. git diff 確認無殘留
+    anti_patterns:
+      - "只移除部分層次，遺留孤立程式碼"
+      - "不檢查依賴是否孤立就留著 import"
+      - "移除後不做語法驗證"
+
+  - id: orphan-dependency-check
+    name: "移除功能後的孤立依賴檢查"
+    context: |
+      移除了使用 axios 的 API endpoint，需要確認 axios 是否還有其他使用者。
+    expected_behavior: |
+      執行 grep -r "axios" . 掃描整個專案
+      若只有被移除的 endpoint 使用 → 移除 require/import 語句
+      若還有其他使用者 → 保留，繼續語法驗證
+    anti_patterns:
+      - "不檢查就直接移除 import（可能破壞其他功能）"
+      - "不檢查就保留 import（留下孤立依賴）"
+
+  - id: node-server-restart-verify
+    name: "Node.js 服務修改後重啟驗證"
+    context: |
+      修改了 quest-board/server.js，新增 POST /api/reminder/add 端點。
+    expected_behavior: |
+      1. ps aux | grep "node.*server.js" | grep -v grep 找 PID
+      2. kill <PID> && sleep 1 && cd ~/assistant/quest-board && node server.js &
+      3. curl -s http://localhost:3000/status 確認服務回復
+      4. curl -s -X POST http://localhost:3000/api/reminder/add -H "Content-Type: application/json" -d '{"title":"test"}' | jq
+    anti_patterns:
+      - "修改 server.js 後不重啟就測試新端點"
+      - "重啟後不先確認服務健康就測功能"
+      - "使用 kill -9 而不是 kill（正常關閉）"
+
+  - id: quest-board-integration-verify
+    name: "Quest Board API 整合驗證"
+    context: |
+      修改了 forge/complete 邏輯，需要驗證扣 gold 和加 stat 都正確。
+    expected_behavior: |
+      1. jq '.player' state.json 記錄初始值
+      2. curl -X POST /api/forge/complete -d '{"id":"rN"}'
+      3. jq '.player | {gold, xp}' state.json 確認扣 gold 正確
+      4. jq '.tasks[] | select(.id=="rN") | .status' state.json 確認 status==="completed"
+    anti_patterns:
+      - "不記錄初始值就測試，無法確認數值變化"
+      - "只看 API 回傳 ok:true，不驗 state.json 持久化"
+      - "不驗證 task status 是否實際更新"
+
+  - id: combined-removal-restart
+    name: "功能移除後的完整流程"
+    context: |
+      移除 server.js 中的 /api/weather endpoint，然後需要驗證服務正常運行。
+    expected_behavior: |
+      Pattern 2（移除 + 孤立依賴檢查）→ Pattern 1（語法預檢）→ Pattern 3（重啟驗證）
+      依序：grep掃描 → 分層移除 → 孤立依賴確認 → node -c 預檢 → kill+重啟 → curl驗證
+    anti_patterns:
+      - "跳過語法預檢直接重啟"
+      - "重啟後不驗證服務健康度"
+      - "不按依賴順序移除，導致遺漏殘留"
+
+  # Boundary scenarios（有辨別力）
+  - id: boundary-grep-only-in-tests
+    name: "Boundary: 孤立依賴只在測試檔出現"
+    context: |
+      移除 quest-board 的 weather endpoint 後，執行：
+      grep -r "require.*axios\|import axios" . --include="*.js"
+      結果只找到 tests/weather-api.test.js 這一個檔案。
+    expected_behavior: |
+      Production 代碼已無 axios 引用 → 移除 server.js 中的 require('axios')。
+      測試檔仍引用 axios 是因為測試邏輯本身，需要檢查測試是否需要同步更新
+      或標記為過時測試。不應因「測試還用到」就保留 production import。
+    anti_patterns:
+      - "因為 tests/weather-api.test.js 還有 import 就保留 production require('axios')"
+      - "移除 production import 但不處理現在已孤立的測試檔"
+      - "不區分 production code 和 test code 的依賴"
+
+  - id: boundary-syntax-pass-runtime-fail
+    name: "Boundary: node -c 語法通過但服務啟動失敗"
+    context: |
+      修改 server.js 後執行 node -c server.js 通過，然後重啟服務。
+      kill + node server.js & 執行後，curl http://localhost:3000/health 返回 Connection refused。
+    expected_behavior: |
+      node -c 只驗語法，不驗 runtime。啟動失敗時：
+      1. 等待幾秒讓進程完全啟動（race condition）
+      2. 若仍 refused → ps aux | grep node 確認進程是否存在
+      3. 若進程不存在 → node server.js（不後台）看完整錯誤輸出
+      常見原因：missing env var、port 已被佔用、require() 路徑錯誤。
+    anti_patterns:
+      - "node -c 通過後認為服務一定能啟動"
+      - "Connection refused 後立即重試不診斷原因"
+      - "不看啟動時的 stderr 輸出就重試"

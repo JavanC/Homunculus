@@ -1,0 +1,191 @@
+skill: tdd-workflow
+version: "1.2"
+last_eval: "2026-03-19"
+pass_rate: 100
+total_scenarios: 11
+
+scenarios:
+  - id: api-endpoint-test-generation
+    name: "Forge 任務 API endpoint AC 生成測試"
+    context: |
+      Forge 任務 r20 有 AC: "[testable] POST /api/forge/review 回應包含 verdict 欄位"
+      需要為此 AC 生成測試。
+    expected_behavior: |
+      使用 Pattern A（API Endpoint 測試）生成 node:test 測試：
+      - require helpers.js 的 request 函式
+      - before/after 用 backupState/restoreState 隔離
+      - assert response status === 200
+      - assert data.verdict 存在
+      - 跑一次確認 RED（功能尚未實作時）
+    anti_patterns:
+      - "使用 Jest/Vitest 而非 node:test"
+      - "Mock server 而非測真實 server"
+      - "不做 state 隔離（沒有 backup/restore）"
+
+  - id: testable-manual-classification
+    name: "AC 混合 testable + manual 正確分類"
+    context: |
+      Forge 任務有以下 AC：
+      1. POST /api/quest/add 回應 200 且包含 task 物件
+      2. UI 上新任務卡片顯示正確的標題
+      3. state.json 中 tasks 陣列包含新任務
+    expected_behavior: |
+      AC 1 標記 [testable]：可用 HTTP request 自動驗證
+      AC 2 標記 [manual]：UI 顯示需人工或截圖驗證
+      AC 3 標記 [testable]：可用 readState() 自動驗證
+      只為 AC 1 和 AC 3 生成測試，AC 2 留在 review 時手動確認
+    anti_patterns:
+      - "把所有 AC 都標為 testable"
+      - "把可程式化驗證的 AC 標為 manual"
+      - "為 manual AC 也生成測試"
+
+  - id: state-isolation
+    name: "測試間 state 隔離"
+    context: |
+      兩個測試都會修改 state.json：測試 A 完成一個任務（+XP），測試 B 新增一個任務。
+      它們在同一個 test file 中。
+    expected_behavior: |
+      使用 backupState/restoreState 在 before/after 中隔離。
+      指定 --concurrency=1 避免平行執行時 state 衝突。
+      測試 B 不依賴測試 A 的副作用（不假設 XP 已增加）。
+    anti_patterns:
+      - "不做 backup/restore，測試間共享 state 副作用"
+      - "平行執行多個 test file 寫同一個 state.json"
+      - "測試 B 依賴測試 A 的執行結果"
+
+  - id: shell-script-behavior
+    name: "Shell script 行為驗證"
+    context: |
+      修改了 heartbeat.sh 的 log 格式，需要驗證輸出格式正確。
+    expected_behavior: |
+      使用 Pattern C：execSync 執行 script，驗證 exit code 0。
+      驗證 stdout 包含預期格式（如時間戳記 [YYYY-MM-DD]）。
+      不驗內部實作（不讀 script 內的變數）。
+      設定 timeout 防止 hang。
+    anti_patterns:
+      - "Mock shell 環境而非真實執行"
+      - "驗內部變數而非 stdout/exit code"
+      - "不設 timeout 導致測試 hang"
+
+  - id: red-green-fix-cycle
+    name: "測試失敗後修 code 不改 test"
+    context: |
+      gen-tests 生成了測試，跑出 RED。
+      測試預期 POST /api/forge/stage 回傳 { ok: true, task: {...} }，
+      但實際回傳 { ok: true }（缺少 task 欄位）。
+    expected_behavior: |
+      修改 server.js 中的 /api/forge/stage handler，在 response 中加入 task 欄位。
+      重新跑測試確認 GREEN。
+      不修改測試的 assert 來「配合」現有行為。
+    anti_patterns:
+      - "把 assert(data.task) 改成 assert(data.ok) 來通過測試"
+      - "刪除失敗的測試"
+      - "把測試標記為 skip"
+
+  - id: nightly-backfill
+    name: "夜間 backfill 補測試"
+    context: |
+      夜間 agent 需要為 quest-board 補測試。
+      目前 tests/ 有 forge-api.test.js（5 tests），缺 quest-api.test.js。
+    expected_behavior: |
+      1. 掃描 server.js 中所有 /api/quest/* endpoint
+      2. 生成 quest-api.test.js，覆蓋 add/complete/undo/delete
+      3. 每個 endpoint 至少測 happy path + 一個 error case（如 missing id）
+      4. 跑 node --test --concurrency=1 tests/*.test.js 確認全綠
+      5. 確認新測試不破壞既有 forge-api.test.js
+    anti_patterns:
+      - "生成的測試不跑就 commit"
+      - "新測試依賴 forge-api.test.js 的 state 副作用"
+      - "一次補太多，不驗證就結束"
+
+  - id: port-conflict-debug
+    name: "測試 port 競爭問題診斷"
+    context: |
+      node --test tests/*.test.js 跑出 13 個失敗，
+      但 node --test tests/forge-advanced-api.test.js 獨立執行全過。
+      所有測試都使用 port 3999。
+    expected_behavior: |
+      正確診斷為 port 競爭（多個 test file 同時 bind 3999）。
+      建議解法：--test-concurrency=false 或每個 test file 用不同 port。
+      優先建議 --test-concurrency=false（最簡單，不需改 helpers.js）。
+      不建議 mock server 或 skip 失敗測試。
+    anti_patterns:
+      - "嘗試 mock HTTP 層來迴避問題"
+      - "把 13 個失敗測試刪除或 skip"
+      - "沒有診斷就直接重寫 helpers.js"
+      - "認為是測試邏輯問題而非 port 衝突"
+
+  - id: test-for-external-api
+    name: "有外部 API 依賴的 endpoint 測試"
+    context: |
+      需要為 GET /api/weather 寫測試。
+      這個 endpoint 會呼叫 api.open-meteo.com（外部服務）。
+      測試需要在 CI/CD 和離線環境都能穩定執行。
+    expected_behavior: |
+      策略：
+      1. 測試 endpoint 存在並回應（允許 ok:true 或 ok:false/timeout）
+      2. 若 ok:true，驗證回應結構（desc, tempC, weatherCode, isBad 欄位）
+      3. 不 hardcode 預期的氣溫或天氣狀態（外部資料會變）
+      4. 接受 200（成功）或 504（timeout）兩種 status code
+    anti_patterns:
+      - "assert status === 200（忽略 timeout 可能）"
+      - "assert tempC > 20（依賴特定氣溫）"
+      - "完全跳過外部 API endpoint 的測試"
+      - "用 nock/mock 替換 http 請求（增加複雜度不必要）"
+
+  - id: habit-questid-body-field
+    name: "Habit endpoint 用 questId 非 id（邊界：容易弄錯的 API 差異）"
+    context: |
+      需要為 POST /api/habit/complete 寫測試。
+      helpers.js 的 request() 函式傳 JSON body。
+      該 endpoint 的 body 欄位是 questId（非 id 或 taskId）。
+    expected_behavior: |
+      測試 body 使用 { questId: TEST_HABIT_ID } 而非 { id: ... }。
+      先從 state.json 的 today.habits 讀取一個有效的 habit id 作為 TEST_HABIT_ID。
+      在 after hook 中用 habit/undo 撤銷（保持 state 乾淨），或用 backupState/restoreState。
+      注意：habit 是 ephemeral（每日重置），不能用 quest 的 add → complete 模式。
+    anti_patterns:
+      - "body 用 { id: TEST_HABIT_ID }（習慣性用 id，但 habit endpoint 用 questId）"
+      - "body 用 { taskId: ... }（forge/quest 完成 API 的欄位名）"
+      - "假設可以 POST /api/habit/add 來建立 habit（習慣是 ephemeral，由 refresh.sh 建立）"
+      - "不做 undo，habit 狀態污染後續測試"
+
+  - id: forge-complete-vs-quest-complete
+    name: "Forge 完成 vs Quest 完成 API 路徑選擇（邊界：任務類型判斷）"
+    context: |
+      需要測試「完成一個 Forge 任務」。
+      state.json 中有 tasks[]，其中有些有 forge_cost，有些沒有。
+    expected_behavior: |
+      Forge 任務（有 forge_cost）→ 用 POST /api/forge/complete，body: { id }。
+      Quest 任務（無 forge_cost）→ 用 POST /api/quest/complete，body: { id }。
+      測試中先 POST /api/forge/add 建立 Forge 任務（帶 forge_cost），再 complete。
+      驗證回傳 { ok: true, player: {...} } 且 player.gold 減少了 forge_cost。
+    anti_patterns:
+      - "Forge 任務用 /api/quest/complete（404 或靜默失敗）"
+      - "Quest 任務用 /api/forge/complete（忽略 forge_cost 欄位差異）"
+      - "不驗證 gold 消耗（漏掉 Forge 機制的核心邏輯）"
+      - "用 /api/task/complete（舊 API，已移除）"
+
+  - id: modify-existing-endpoint-update-existing-tests
+    name: "修改既有 endpoint 回應格式：應更新現有測試而非新建（邊界：augment vs new file）"
+    context: |
+      Forge 任務 r55：修改 POST /api/quest/delete 回應格式。
+      原本：{ ok: true }
+      新的：{ ok: true, deleted_task: { id, title, forge_cost } }
+      quest-api.test.js 中已有一個測試：
+        it('POST /api/quest/delete returns 200', ...) → assert status 200 + data.ok
+      需要把「deleted_task 欄位存在且有正確結構」這個 AC 轉成測試。
+    expected_behavior: |
+      正確做法：修改 quest-api.test.js 中現有的 delete 測試，新增 assert：
+        assert.ok(data.deleted_task, 'should return deleted task')
+        assert.ok(data.deleted_task.id, 'deleted_task should have id')
+        assert.ok(data.deleted_task.title !== undefined, 'deleted_task should have title')
+      不應建立新的 test file 只為測這一個 AC 的新欄位。
+      不應修改既有 assert 讓它更寬鬆，反而應加新的 assert。
+      也可考慮新增一個獨立的 it() 區塊在同一檔案中，只測 deleted_task 的結構。
+    anti_patterns:
+      - "建立 quest-delete-v2-api.test.js 新檔，重複已有的 status/ok 驗證"
+      - "修改現有 assert 成 typeof data === 'object' 讓它過關（寬化現有測試而非加新斷言）"
+      - "完全略過 deleted_task 結構驗證，只確認 status 200 和 ok: true"
+      - "把整個 quest-api.test.js 重寫，而非只在既有 delete 測試後加新 assert"
+

@@ -1,0 +1,151 @@
+skill: multi-agent-design-patterns
+version: "1.2"
+last_eval: "2026-03-22"
+pass_rate: null
+total_scenarios: 10
+
+scenarios:
+  - id: task-distribution-lock
+    name: "平行 Agent 任務分配 — File Lock 協議"
+    context: |
+      設計 4 個 Claude Code agents 同時修復一個大型 codebase 中的 bug。
+      每個 agent 在不同 git worktree 執行，需要避免重複認領同一個 bug ticket。
+    expected_behavior: |
+      使用 current_tasks/<task-id>.lock 檔案 + git push 的去中心化機制。
+      push 失敗（conflict）時 → pull → 確認是否被搶先 → 選下一個任務。
+      不使用中央 orchestrator。
+    anti_patterns:
+      - "用一個中央 orchestrator 分配任務"
+      - "用資料庫或共享記憶體做 locking"
+      - "讓所有 agent 等待某個 coordinator 的指令"
+
+  - id: mechanical-agent-isolation
+    name: "機械式 Agent 不加決策邏輯"
+    context: |
+      建立一個 summarizer agent，從 night-report.md 提取「建議行動」清單，
+      然後篩選出「重要性高」的行動，轉換為 JSON 格式傳給 webhook。
+    expected_behavior: |
+      拆分為兩個 agent：
+      1. 機械式 summarizer：只負責 markdown → JSON 提取（格式轉換），輸出完整清單
+      2. 決策層（人工或決策 agent）：負責「重要性高」的過濾判斷
+      不在 summarizer 中加入篩選邏輯。
+    anti_patterns:
+      - "在同一個 agent 中同時做提取和篩選"
+      - "讓 summarizer 自行決定哪些行動重要"
+
+  - id: reliability-model-choice
+    name: "長時間 Agent Loop — 模型選擇"
+    context: |
+      夜間 agent 需要持續執行 6 小時，處理 50+ 個研究任務，
+      每個任務都需要完整的 tool use 循環。預算有限。
+    expected_behavior: |
+      使用 Sonnet 或 Opus，不用 Haiku（Karpathy 驗證：較弱模型無法維持長時間指令遵循）。
+      在自然任務邊界做 compact（不等到 token 耗盡）。
+      維護外部狀態檔案（TASK_PROGRESS.md）記錄已完成/下一步。
+    anti_patterns:
+      - "用 Haiku 節省成本但犧牲長時間可靠性"
+      - "不做 compact，直到 token 耗盡"
+      - "只依賴對話記憶，不維護外部狀態"
+
+  - id: tdd-agent-workflow
+    name: "Agent 輔助開發 — TDD 最佳實踐"
+    context: |
+      讓 agent 實作一個新 API endpoint /api/forge/stage，需要確保品質。
+      開發者問：「應該讓 agent 直接寫代碼，還是先做什麼？」
+    expected_behavior: |
+      先讓 agent 寫 failing tests（描述 acceptance criteria），
+      然後再實作（red-green TDD）。測試讓 agent 保持正確方向，
+      並防止 agent 自我恭賀（自己寫代碼自己寫測試但 AC 未真正驗證）。
+    anti_patterns:
+      - "讓 agent 直接寫代碼，事後補測試"
+      - "假設 agent 知道什麼是「完成」"
+
+  - id: private-tool-exploration
+    name: "Agent 使用私有/不熟悉工具"
+    context: |
+      Agent 需要使用 `forge-dev` CLI 工具（私有工具，訓練資料中沒有）。
+      如何讓 agent 正確使用？
+    expected_behavior: |
+      在 prompt 中明確告訴 agent：「先用 forge-dev --help 學習工具用法」。
+      現代模型的 context length 夠大，可以先消化完整工具文件再開始工作。
+    anti_patterns:
+      - "假設 agent 知道私有工具的用法"
+      - "在 prompt 中硬寫所有工具參數（不如讓 agent 自己 --help）"
+
+  - id: direnv-worktree-setup
+    name: "平行 Worktree 環境配置"
+    context: |
+      建立 3 個 git worktrees 給 3 個 agent 並行工作，
+      但每個 worktree 需要相同的 .env 和 API keys。
+    expected_behavior: |
+      在 repo 根目錄建立 .envrc（.gitignored），使用 direnv 讓所有 worktree
+      自動繼承環境變數，無需手動複製 .env 到每個 worktree。
+    anti_patterns:
+      - "手動複製 .env 到每個 worktree"
+      - "把 API keys 放進 .gitignore 之外的檔案"
+
+  # Boundary scenarios（有辨別力）
+  - id: boundary-emergent-vs-forced-specialization
+    name: "Boundary: 有機專業化 vs 強制分工"
+    context: |
+      16 個 agents 同時修復 codebase，你可以：
+      A) 告訴每個 agent 「你負責修 networking 模組，你負責修 parser」
+      B) 讓每個 agent 自行選擇「下一個最明顯的問題」
+    expected_behavior: |
+      選擇 B（有機專業化）。強制分工限制彈性，且 agent 在動態環境中
+      自然選擇的任務比人工指定更符合當前 repo 狀態。
+      Anthropic C compiler 案例驗證：自然分化出比強制分工更多樣的角色。
+    anti_patterns:
+      - "強制每個 agent 負責固定模組（降低彈性）"
+      - "不信任 agent 自主選擇，堅持強制指派"
+
+  - id: boundary-external-memory-pattern
+    name: "Boundary: 長時間 Agent 記憶跨 Compact"
+    context: |
+      夜間 agent 執行到一半 context 接近上限，需要 compact。
+      compact 後 agent 繼續工作，但不確定之前完成了什麼。
+    expected_behavior: |
+      Compact 前更新外部狀態檔案（TASK_PROGRESS.md 或 night-journal.md），
+      記錄「已完成項目 + 當前狀態 + 下一步」。
+      Compact 後，從外部檔案重載狀態，繼續工作。
+      不依賴對話記憶（compact 後已消失）。
+    anti_patterns:
+      - "相信 compact 後對話摘要能完整保留所有狀態"
+      - "不維護外部狀態檔案"
+      - "Compact 後重新掃描所有檔案判斷進度（效率低）"
+
+  - id: boundary-subagent-over-dispatch
+    name: "Boundary: 過度分派 Subagent（保留 Root Context）"
+    context: |
+      你是 root agent，context 使用率約 35%（仍有 65% 空間）。
+      需要對 3 個小檔案做 code review（每個檔案 ~200 行）。
+      選項：
+      A) 直接在當前 context 中讀取並 review 這 3 個檔案
+      B) 為每個檔案 dispatch 一個 specialist code-reviewer subagent
+    expected_behavior: |
+      選 A。Root agent 有 65% context 空間，直接處理 3 個小檔案完全足夠。
+      Subagent 的主要價值是「保護 root context window」，當 root 有足夠空間時，
+      dispatch subagent 只增加開銷（新 session 啟動 + 結果傳回整合）而無實質收益。
+      判斷規則：root context > 40% → 直接處理；root context < 20% → 考慮 dispatch。
+    anti_patterns:
+      - "root context 充足時仍強制使用 specialist subagent"
+      - "誤以為分工本身是 subagent 的目的（實際目的是 context 保護）"
+      - "為小任務 dispatch subagent，增加不必要的 session 開銷"
+
+  - id: boundary-writer-reviewer-dual-session
+    name: "Writer/Reviewer 雙 Session — 降低確認偏誤"
+    context: |
+      團隊要在認證模組加入 OAuth 支援，涉及 session 管理和 token 刷新。
+      一個 agent 已經完成實作（修改了 5 個檔案）。
+      現在需要做 code review。有兩種方式：
+      A) 讓同一個 agent session 自己 review 自己的 code
+      B) 開一個全新的 session，只給唯讀工具，從頭 review
+    expected_behavior: |
+      選 B。高風險改動（認證/安全）應使用 Writer/Reviewer 雙 Session 模式。
+      Session A（Writer）做完決策後會傾向確認自己的選擇是對的（confirmation bias）。
+      Session B（Reviewer）從全新 context 開始，只有 Read/Grep/Glob 唯讀工具，
+      更容易發現 A 忽略的問題。
+    anti_patterns:
+      - "讓同一個 session 自我 review（自我確認偏誤）"
+      - "reviewer session 給寫入工具（失去獨立性）"
+      - "只對 typo 級別改動才用雙 session（高風險改動更需要）"

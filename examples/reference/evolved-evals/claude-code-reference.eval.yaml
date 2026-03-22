@@ -1,0 +1,394 @@
+skill: claude-code-reference
+version: "4.9"
+last_eval: "2026-03-22"
+pass_rate: 100
+total_scenarios: 22
+grader_type: model  # model=LLM 判斷 | code=腳本驗證
+
+scenarios:
+  - id: headless-cli-script
+    name: "Headless CLI 在 Shell Script 中使用"
+    context: |
+      開發者需要在 shell script 中呼叫 claude CLI，要求：
+      1. 不受 CLAUDECODE 環境變數影響
+      2. 輸出 JSON 格式並提取 result 欄位
+      3. 多步驟對話（step 1 的 session 傳給 step 2）
+    expected_behavior: |
+      - 提到 `unset CLAUDECODE` 作為第一步
+      - 提到 `--output-format json | jq -r '.result'`
+      - 提到 `--output-format json | jq -r '.session_id'` 取得 session ID
+      - 提到 `--resume "$SESSION"` 繼續多步驟對話
+    anti_patterns:
+      - "沒有 unset CLAUDECODE 就直接呼叫 claude"
+      - "用 grep 而非 jq 解析 JSON"
+      - "沒有提到 session 保留機制"
+
+  - id: hooks-vs-skills-decision
+    name: "Hooks vs Skills 選擇決策"
+    context: |
+      用戶想在每次 Edit 工具執行後自動執行某個動作（格式化、lint）。
+      問：應該用 Hooks 還是 Skills？
+    expected_behavior: |
+      - 推薦 Hooks（PostToolUse 類型）
+      - 說明 Skills 是主動呼叫的命令，不能自動觸發
+      - 提到 matcher 可以設定 tool_name: Edit
+      - 說明 hook 接收 JSON stdin 包含 tool_name 和結果
+    anti_patterns:
+      - "推薦用 Skills 做自動觸發"
+      - "沒有提到 PostToolUse"
+      - "沒有說明 matcher 設定"
+
+  - id: mcp-server-setup
+    name: "新增 MCP Server"
+    context: |
+      用戶想新增一個本地 MCP server（node 程式，路徑 ~/tools/my-mcp.js），
+      只在這個專案使用，不要全域啟用。
+    expected_behavior: |
+      - 在 `.claude/settings.json` 或 `.mcp.json` 中設定（project scope）
+      - 格式：`{"mcpServers": {"my-tool": {"command": "node", "args": ["~/tools/my-mcp.js"]}}}`
+      - 說明 user scope 是 `~/.claude/settings.json`，project scope 是 `.claude/settings.json`
+    anti_patterns:
+      - "只說明全域設定，不提 project scope"
+      - "格式錯誤（command 不是 node）"
+      - "沒有提到 settings.json 的位置"
+
+  - id: cost-optimization
+    name: "降低 Claude Code 成本"
+    context: |
+      用戶反映 Claude Code 每週成本太高，想要具體的降低方法。
+      目前用 Sonnet 模型，有時做簡單的重複性任務。
+    expected_behavior: |
+      - 提到模型選擇（Haiku 用於重複性任務）
+      - 提到 hooks 預處理可以減少 AI 需介入的次數
+      - 提到 ENABLE_TOOL_SEARCH=0 或 MAX_THINKING_TOKENS 環境變數
+      - 或提到 --max-budget-usd 成本上限
+    anti_patterns:
+      - "只說用 Haiku，沒有其他建議"
+      - "建議完全停用功能而非優化"
+
+  - id: permission-allow-pattern
+    name: "設定精細 Permission 允許規則"
+    context: |
+      用戶想允許 `npm run *` 類的所有 npm 命令自動執行，
+      但其他 bash 命令仍需要確認。
+    expected_behavior: |
+      - 在 `.claude/settings.json` 中設定 `allowedTools`
+      - 格式：`"Bash(npm run *)"`（glob 模式）
+      - 說明 `//path` 是絕對路徑，`~/` 是 home
+      - 或說明 `/permissions` 命令可以互動管理
+    anti_patterns:
+      - "允許所有 Bash 命令（安全風險）"
+      - "沒有說明 glob 模式語法"
+
+  - id: enterprise-pr-review
+    name: "Teams 自動 PR Code Review 設定"
+    context: |
+      用戶的團隊使用 GitHub，想要設定每次 PR 時自動進行 code review。
+      問：如何設定？費用如何？可以自訂 review 規則嗎？
+    expected_behavior: |
+      - 說明需要 Teams/Enterprise 方案
+      - 提到 Admin 在 `claude.ai/admin-settings/claude-code` 啟用
+      - 說明費用約 $15-25/review
+      - 提到 `REVIEW.md` 可以設定 review 專用規則（獨立於 CLAUDE.md）
+      - 提到 inline comment 嚴重度標籤（🔴🟡🟣）
+    anti_patterns:
+      - "說可以在 Free plan 使用"
+      - "混淆 REVIEW.md 與 CLAUDE.md 的用途"
+      - "沒有提到費用"
+
+  - id: code-intelligence-plugin
+    name: "安裝 Code Intelligence Plugin 提升開發效率"
+    context: |
+      用戶在 TypeScript 專案工作，希望 Claude 能自動偵測型別錯誤，
+      不需要手動執行 tsc。問：有什麼方法可以做到？
+    expected_behavior: |
+      - 提到 Claude Code 官方 marketplace 有 code intelligence plugins
+      - 提到 `vtsls@claude-code-lsps` plugin（typescript-lsp 有 bug #15235 應避免）
+      - 說明安裝後 Claude 每次 edit 後自動得到 LSP 診斷，可即時修復型別錯誤
+      - 提到需設定 `ENABLE_LSP_TOOL=1` 環境變數啟用 LSP
+      - 提到安裝指令：`/plugin install vtsls@claude-code-lsps`
+    anti_patterns:
+      - "建議手動跑 tsc 而不提 LSP plugin"
+      - "不知道有 code intelligence plugin"
+      - "推薦使用 typescript-lsp（有 bug #15235，應用 vtsls）"
+      - "沒有提到 ENABLE_LSP_TOOL=1"
+
+  - id: pr-attribution-analytics
+    name: "PR 貢獻度追蹤（Analytics）"
+    context: |
+      Teams 方案用戶想追蹤團隊中 Claude Code 對 PR 的貢獻度。
+      問：merge 後如何知道哪些 PR 是 Claude Code 協助完成的？
+    expected_behavior: |
+      - 提到自動貼 `claude-code-assisted` GitHub label
+      - 說明歸因窗口（merge 前 21 天 + 後 2 天的 session activity）
+      - 提到 `gh pr list --label "claude-code-assisted"` 可程式化查詢
+      - 說明保守估計機制（自動過濾 lock files / minified）
+    anti_patterns:
+      - "說需要手動標記 PR"
+      - "不知道有 claude-code-assisted 標籤"
+      - "說個人 API 帳號也支援（實際上需要 Teams/Enterprise）"
+
+  - id: hooks-advanced-env-file
+    name: "SessionStart Hook 持久化環境變數"
+    context: |
+      用戶想在每個 session 開始時設定某些環境變數（如 NODE_ENV=production），
+      讓所有後續 Bash 呼叫都自動帶這些環境變數，不需要手動 export。
+      問：用 hooks 如何實現？
+    expected_behavior: |
+      - 提到 SessionStart hook 類型
+      - 提到 `CLAUDE_ENV_FILE` 環境變數（SessionStart 專用）
+      - 說明寫入 `$CLAUDE_ENV_FILE` 的環境變數會持久化到後續所有 Bash 呼叫
+      - 提供腳本範例：`echo 'export NODE_ENV=production' >> "$CLAUDE_ENV_FILE"`
+    anti_patterns:
+      - "建議在每個 Bash 命令前手動 export"
+      - "不知道 CLAUDE_ENV_FILE 的存在"
+      - "建議用 PreToolUse hook（應用 SessionStart）"
+
+  - id: session-context-anti-patterns
+    name: "避免 Context Window 常見錯誤"
+    context: |
+      用戶反映 Claude Code 在長 session 後表現變差，
+      常常需要重新解釋之前說過的事情。問：有什麼解決方法？
+    expected_behavior: |
+      - 提到 /clear 在任務切換時重置 context
+      - 提到 /compact <instructions> 指定保留重點
+      - 說明連續修正兩次仍失敗 → 應 /clear 而非繼續累積失敗 context
+      - 提到 /rename 命名 session 方便之後 --resume 恢復
+      - 或提到 subagent 做調查可以保持主 context 乾淨
+    anti_patterns:
+      - "只說等待自動 compact"
+      - "沒有提到 /clear 的使用時機"
+      - "建議關閉再重開整個 CC"
+
+  - id: remote-control-vs-web
+    name: "Remote Control vs Claude Code on the web 差異"
+    context: |
+      用戶有兩個問題：
+      1. 外出時想用手機繼續在 MacBook 上跑的 Claude Code session，
+         本地 MCP tools 和檔案系統都要可以用。怎麼做？
+      2. Remote Control 和直接用瀏覽器開 Claude Code on the web 有什麼差別？
+    expected_behavior: |
+      - 問題 1：推薦 Remote Control（`claude remote-control` 或 `/rc`），
+        說明 session 仍在本機執行，本地 MCP/工具/檔案系統全部可用
+      - 說明連接方式：QR code 手機掃描，或 URL，或 claude.ai/code
+      - 問題 2：清楚區分執行位置差異（Remote Control=本機 vs CC on the web=雲端），
+        說明 CC on the web 無法存取本地檔案/MCP
+      - 提到限制：關閉 terminal = session 結束，或網路中斷超過 ~10 分鐘
+    anti_patterns:
+      - "說 Remote Control 在雲端執行"
+      - "說兩者功能相同"
+      - "沒有提到本地 MCP/工具仍可用"
+      - "沒有提到關閉 terminal 的限制"
+
+  - id: output-styles-vs-claude-md
+    name: "Output Styles 與 CLAUDE.md 的差異"
+    context: |
+      用戶想讓 Claude Code 變成教學模式：每次操作時加入解釋，
+      幫助他學習正在使用的 codebase。他想知道：
+      1. 應該用 CLAUDE.md 還是 Output Styles？
+      2. 如何設定？有沒有現成的教學模式？
+    expected_behavior: |
+      - 推薦 Output Styles（而非 CLAUDE.md）
+      - 解釋關鍵差異：Output Styles 替換 system prompt；CLAUDE.md 是附加到 user message
+      - 提到內建 `explanatory` style（每個操作間加入教育性 insights）
+        或 `learning` style（insights + 要求用戶完成部分代碼）
+      - 說明設定方式：`/config` 介面選擇，或在 `.claude/output-styles/` 建立自訂 style
+    anti_patterns:
+      - "說 Output Styles 和 CLAUDE.md 作用相同"
+      - "不知道有 explanatory/learning 內建 style"
+      - "說 Output Styles 是附加而非替換 system prompt"
+      - "沒有提到 /config 設定方式"
+
+  - id: new-features-v2-1-59-71
+    name: "v2.1.59-71 新功能速查"
+    context: |
+      用戶從 v2.1.58 升級到最新版後想了解：
+      1. 如何在 session 中設定每 5 分鐘執行一次 deploy 檢查？
+      2. 用 --resume 繼續 session 時，有什麼 token 節省的改進？
+      3. 如何從 system prompt 移除 Claude Code 內建的 git 工作流指令？
+    expected_behavior: |
+      - 問題 1：提到 `/loop 5m check deploy` 命令（v2.1.71），或 CronCreate tool
+      - 問題 2：提到 v2.1.70 修復了 skill listing 重複注入，--resume 省 ~600 tokens
+      - 問題 3：提到 `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=1` env var（v2.1.69）
+        或 `includeGitInstructions: false` setting
+    anti_patterns:
+      - "說 /loop 不存在或需要 cron/launchd"
+      - "不知道 --resume 有 token 節省"
+      - "說無法移除 git 指令"
+
+  - id: v2176-postcompact-and-elicitation
+    name: "v2.1.76 PostCompact Hook 與 MCP Elicitation 應用"
+    context: |
+      用戶升級到 v2.1.76，想了解兩件事：
+      1. 想在 compaction 完成後自動把 instinct 摘要注入 context（保持重要記憶）。
+         問：有沒有 hook 可以在 compaction 後觸發？
+      2. 自己寫了一個 MCP server，希望在執行某個工具時能向用戶確認一個選項。
+         問：v2.1.76 有什麼新機制支援這個？
+    expected_behavior: |
+      - 問題 1：提到 `PostCompact` hook（v2.1.76 新增）
+      - 說明 PostCompact hook 在 compaction 完成後觸發，可輸出文字注入 context
+      - 提供設定範例（hooks 設定 type: command，觸發 shell script）
+      - 問題 2：提到 MCP Elicitation（v2.1.76 新增）
+      - 說明 MCP server 可透過 `Elicitation` 發出互動式請求，CC 彈出 dialog 讓用戶輸入結構化資料
+      - 提到 `ElicitationResult` hook 可攔截/處理結果
+    anti_patterns:
+      - "說 compaction 後無法注入任何資訊"
+      - "不知道 PostCompact hook 的存在"
+      - "說 MCP server 無法向用戶請求互動輸入"
+      - "混淆 MCP Elicitation 與一般的 tool call"
+
+  # --- Boundary Scenarios (designed for precision testing, higher difficulty) ---
+
+  - id: boundary-hook-type-confusion
+    name: "[Boundary] Hook 類型混淆：command vs prompt vs agent"
+    difficulty: hard
+    context: |
+      用戶需要做兩件事：
+      1. 每次 Edit 後自動跑 eslint（確定性行為，不需 AI）
+      2. 每次 Edit 後讓 AI 判斷是否需要更新相關測試（需要推理）
+      問：這兩個分別該用什麼 hook 類型？
+    expected_behavior: |
+      - 任務 1：推薦 `type: "command"`（確定性，shell script 跑 eslint）
+      - 任務 2：推薦 `type: "prompt"` 或 `type: "agent"`（需要 AI 推理）
+      - 清楚區分三種 hook 類型的使用場景：
+        command = 確定性腳本 | prompt = 輕量 AI 判斷 | agent = 複雜多步 AI 任務
+      - 提到 prompt hook 的 output 會注入 context（可引導後續行為）
+    anti_patterns:
+      - "兩個都推薦用 command 類型"
+      - "不區分 prompt 和 agent 的差異"
+      - "不提到 prompt hook output 注入 context 的機制"
+
+  - id: boundary-mcp-scope-tradeoff
+    name: "[Boundary] MCP 設定 scope 的取捨判斷"
+    difficulty: hard
+    context: |
+      用戶有一個 Postgres MCP server。情境：
+      - 這個 MCP 只在 backend 專案需要，不想污染其他專案
+      - 但 backend 專案有 3 個 repo（微服務架構），都需要這個 MCP
+      問：應該放 user scope 還是 project scope？還是有更好的方式？
+    expected_behavior: |
+      - 分析取捨：project scope 需要在 3 個 repo 各設一份（重複但隔離）
+      - 另一選項：user scope `~/.claude/settings.json`（一份但全域可見）
+      - 最佳建議應考慮兩面並做出推薦
+      - 提到可使用 `.mcp.json`（project-level）或 user settings
+    anti_patterns:
+      - "無條件推薦 project scope 而不考慮跨 repo 重複問題"
+      - "無條件推薦 user scope 而不提醒全域影響"
+      - "沒有分析取捨就直接給答案"
+
+  - id: boundary-resume-permissions
+    name: "[Boundary] --resume 與 --fork-session 的權限陷阱"
+    difficulty: hard
+    context: |
+      用戶在一個 session 中設定了 `acceptEdits` 權限。
+      現在想繼續工作，問：--resume 和 --fork-session 會保留這個權限嗎？
+    expected_behavior: |
+      - 關鍵警告：--resume 和 --fork-session 都**不繼承 permissions**
+      - 新的 session 會用預設權限，需要重新設定
+      - 區分 --resume（繼續原 session）vs --fork-session（複製為獨立分支）
+    anti_patterns:
+      - "說 --resume 會繼承權限"
+      - "說 --fork-session 保留原 session 的 permissions"
+      - "不提到權限不繼承的重要警告"
+
+  - id: v2178-stop-failure-hook
+    name: "[v2.1.78] StopFailure hook 使用場景"
+    difficulty: medium
+    context: |
+      用戶的夜間 agent 在執行時偶爾因 rate limit 或 auth failure 靜默退出，
+      無法知道是正常結束還是 API 錯誤導致的退出。
+      問：CC v2.1.78 有什麼機制可以捕捉這種情況？
+    expected_behavior: |
+      - 說明 StopFailure hook（v2.1.78 新增）：API 錯誤結束 turn 時觸發
+      - 區分 Stop hook（正常結束）vs StopFailure hook（API 錯誤結束）
+      - 指出觸發條件：rate limit、auth failure 等 API 層級錯誤
+      - 建議在 settings.json 的 hooks.StopFailure 中配置日誌或通知
+    anti_patterns:
+      - "說 Stop hook 可以捕捉 API 錯誤（Stop hook 只在正常結束時觸發）"
+      - "不知道 StopFailure hook 的存在或說 v2.1.78 沒有此功能"
+      - "混淆 PostToolUseFailure（工具失敗）和 StopFailure（API 錯誤退出）"
+
+  # --- v4.8 新增：覆蓋 v2.1.80 功能 (added by autoresearch round 1, 2026-03-22) ---
+
+  - id: v2180-effort-frontmatter
+    name: "[v2.1.80] Skill effort frontmatter 節省 token"
+    difficulty: medium
+    context: |
+      用戶有一個 `/summarize` skill，這個 skill 用於每日日誌摘要，
+      是低風險、重複性的任務，想要讓這個 skill 預設以低 effort 執行以節省成本。
+      問：v2.1.80 有什麼方法可以在 skill 定義層級設定 effort？
+    expected_behavior: |
+      - 提到 `effort` frontmatter 欄位（v2.1.80 新增）
+      - 說明在 `.md` skill YAML frontmatter 中加入 `effort: low`
+      - 列出可用值：low | medium | high | max
+      - 說明 max = Opus 4.6 only，high-stakes 任務適用
+      - 提到也可用環境變數 `CLAUDE_CODE_EFFORT_LEVEL=low` 在 shell 層控制
+    anti_patterns:
+      - "說 skill 的 effort 無法在 frontmatter 設定（v2.1.80 之前正確，但現在不對）"
+      - "只提到 /model 設定，沒有提到 frontmatter 方式"
+      - "不知道 effort 有 low/medium/high/max 四個值"
+      - "說需要在每次呼叫時手動傳入 effort 設定"
+
+  - id: v2180-channels-vs-webhook
+    name: "[v2.1.80] CC Channels 與 webhook 的使用場景差異"
+    difficulty: hard
+    context: |
+      用戶想讓 CI 系統在 build 完成時通知 Claude Code，
+      讓 Claude 自動分析 build log 並決定是否需要修復。
+      他目前用 Discord webhook 推送通知。問：
+      1. CC Channels 和現有的 webhook 有什麼本質差異？
+      2. 如果要讓 Claude 能「互動式」回應 CI 通知，應該用哪種方式？
+    expected_behavior: |
+      - 清楚區分：CC Channels = 雙向互動控制；webhook = 單向推送通知
+      - 說明 CC Channels 允許 MCP server 推送事件，Claude 可反應並回覆
+      - 回答問題 2：推薦 CC Channels（讓 Claude 能反應並採取行動）
+      - 提到啟用方式：`claude --channels plugin:telegram@claude-plugins-official` 或 discord
+      - 提到關鍵限制：只在 session 開啟時有效；Team/Enterprise 需 admin 啟用
+    anti_patterns:
+      - "說 CC Channels 和 webhook 功能相同"
+      - "不知道 `--channels` flag 的存在"
+      - "建議用 webhook 實現雙向互動"
+      - "說 CC Channels 無需開啟 session 就能持續運作（always-on 需要 background process）"
+
+  # --- v4.9 新增：覆蓋 v2.1.81 功能 (added by autoresearch round 2, 2026-03-22) ---
+
+  - id: v2181-bare-flag-headless-optimization
+    name: "[v2.1.81] --bare flag 加速 headless 腳本呼叫"
+    difficulty: medium
+    context: |
+      用戶的 heartbeat 腳本每小時呼叫 `claude -p` 多次，
+      感覺啟動時間偏長（約 3-4 秒/次，累計很慢）。
+      問：v2.1.81 有什麼方法可以大幅加速這些無狀態 headless 呼叫？
+      這些呼叫不需要 hooks、LSP、或 auto-memory。
+    expected_behavior: |
+      - 提到 `--bare` flag（v2.1.81 新增）
+      - 說明 --bare 跳過所有初始化開銷：hooks、LSP、plugins、skill scan、auto-memory
+      - 說明關鍵限制：必須搭配 `ANTHROPIC_API_KEY` 環境變數（不支援 OAuth/keychain）
+      - 提到 auto-memory 在 --bare 模式下完全停用
+      - 推薦適用場景：heartbeat scripts、CI 無狀態呼叫、不需要記憶/hooks 的一次性任務
+    anti_patterns:
+      - "說標準 `claude -p` 和 `--bare` 速度相同"
+      - "說 --bare 可以和 OAuth 一起使用"
+      - "不知道 --bare flag 的存在（v2.1.81 之前確實不存在）"
+      - "說 --bare 下 hooks 仍然會執行"
+
+  # --- v4.9 Round 3 ---
+
+  - id: v2181-channels-permission-relay
+    name: "[v2.1.81] CC Channels permission relay 夜間 agent 人工審核"
+    difficulty: hard
+    context: |
+      用戶有一個自動夜間 agent，大部分操作自動執行。
+      但他想讓某些高風險操作（如刪除資料、強制 push）在執行前
+      透過 Telegram 通知他並等待他在手機上確認。
+      問：v2.1.81 有什麼機制可以實現？
+    expected_behavior: |
+      - 提到 CC Channels permission relay（v2.1.81 新增）
+      - 說明機制：`--channels` 啟動的 session 中，PermissionRequest 會透過 channel 推送到手機
+      - 提到需要先設定 CC Channels（Telegram 或 Discord plugin）
+      - 建議場景：夜間 agent 保持 `--channels` 啟動，sensitive 操作自動觸發手機通知等待確認
+    anti_patterns:
+      - "說 CC Channels 無法處理 permission 審核"
+      - "建議用 webhook 實現（webhook 是單向，無法等待用戶確認）"
+      - "不知道 v2.1.81 新增了 permission relay 功能"
+      - "說只能設定 deny 規則，沒有互動確認選項"

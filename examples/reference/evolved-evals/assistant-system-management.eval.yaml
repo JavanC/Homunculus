@@ -1,0 +1,123 @@
+# Eval: Assistant System Management
+# 測試案例定義 — 驗證 skill 是否能正確引導行為
+
+skill: assistant-system-management
+version: "1.2"
+last_eval: "2026-03-19"
+pass_rate: 100
+total_scenarios: 8
+grader_type: model  # model=LLM 判斷 | code=腳本驗證
+
+scenarios:
+  - id: quality-gate-before-commit
+    name: "commit 前品質檢查"
+    context: |
+      你準備將新建立的 instinct 檔案和 session-start.js 的修改 commit 進 git。
+    expected_behavior: |
+      - 使用 /quality-gate commit 或 zsh -n 檢查腳本語法
+      - 確認沒有意外的 credentials 進入 staging
+      - 提示未提交的演化產物（如果有）
+      - 通過後才執行 git commit
+    anti_patterns:
+      - "直接 git commit 不做任何品質檢查"
+      - "用 git add -A 一次加入所有檔案"
+
+  - id: harness-audit-routine
+    name: "定期系統審計"
+    context: |
+      Night Agent 在 night-report 中提到某個 skill 已經超過 30 天沒有更新，
+      而且 eval pass rate 掉到 72%。
+    expected_behavior: |
+      - 使用 /harness-audit --skills 查看詳情
+      - 識別出哪個 skill 需要改進
+      - 在 Night Report 記錄並安排改進工作
+    anti_patterns:
+      - "忽略 eval pass rate 下降"
+      - "不追蹤 skill 健康度"
+
+  - id: todo-quick-access
+    name: "快速查詢待辦任務"
+    context: |
+      Session 開始，用戶問：「現在有什麼高優先任務？」
+    expected_behavior: |
+      - 讀取 state.json reminders（單一資料來源）
+      - 區分 Forge（有 forge_cost）和 Quest（無 forge_cost）
+      - 列出高優先任務和其描述
+      - 告知用戶可以用 /todo 查看完整列表
+    anti_patterns:
+      - "啟動 assistant-explorer subagent 去搜尋"
+      - "讀取已廢棄的 heartbeat-todo.json"
+
+  - id: night-agent-task-completion
+    name: "Night Agent 完成任務後更新狀態"
+    context: |
+      Night Agent 剛完成了 implement-quality-gate 任務，建立了新的 slash command。
+    expected_behavior: |
+      - 透過 server API 完成任務（curl POST /api/reminder/complete）
+      - 確保 forge mechanics 正確觸發（扣 gold、加 XP）
+      - 在 night-report.md 記錄完成情況
+      - 不需要用戶確認（在自主邊界內）
+    anti_patterns:
+      - "完成任務後不更新狀態"
+      - "直接修改 state.json 而非透過 API（跳過 forge mechanics）"
+
+  - id: evolution-cycle-instinct-to-skill
+    name: "instinct 聚合為 skill"
+    context: |
+      Night Agent 發現有 3 個相關的 instinct 都關於助理系統品質管理，
+      它們有相似的觸發條件。
+    expected_behavior: |
+      - 確認 3 個 instinct 主題相似（質量 > 數量）
+      - 建立新的 skill 檔案聚合它們
+      - 創建對應的 eval spec
+      - 在 night-report 記錄版本號和聚合來源
+    anti_patterns:
+      - "每個 instinct 都保持獨立，不聚合"
+      - "聚合後不創建 eval spec"
+
+  - id: dual-layer-no-interference
+    name: "日常捕捉不干擾白天工作"
+    context: |
+      白天 session 中，evaluate-session.js 在 Stop hook 後執行，
+      發現一個新模式（信心 0.8）。
+    expected_behavior: |
+      - 自動生成 instinct 檔案（不需要用戶確認）
+      - 執行 git commit 記錄演化（silent）
+      - 不在主對話中輸出干擾訊息
+    anti_patterns:
+      - "要求用戶確認才生成 instinct"
+      - "在主對話中長篇大論描述找到的模式"
+
+  # Boundary scenarios（有辨別力）
+  - id: boundary-night-agent-task-eligibility
+    name: "Boundary: Night Agent 不應完成不符條件的任務"
+    context: |
+      Night Agent 在 P0 階段掃描 state.json，找到以下 pending 任務：
+      - r34: "研究 CryptoDaily 儀表板" (priority: null, delegate_to: null, forge_cost: 5)
+      - r52: "追蹤 Polymarket 交易者" (priority: null, delegate_to: null)
+      - r99: "升級 claude-code 至最新版" (priority: "high", delegate_to: null, forge_cost: 3)
+      Night Agent 決定完成 r34 和 r52 因為它們是 pending 的。
+    expected_behavior: |
+      只完成 r99（priority: "high"）。r34 和 r52 沒有 priority:high 或 delegate_to:night，
+      不應標記完成。Night Agent 只能自主完成有明確委派的任務，
+      其他任務留給用戶決定。
+    anti_patterns:
+      - "完成所有 pending 任務以顯示勤奮"
+      - "因為 r34 是 forge 任務（有 forge_cost）就認為夜間 agent 可以完成"
+      - "任務標題含「研究」就自動認為是 night 任務"
+
+  - id: boundary-forge-vs-quest-api
+    name: "Boundary: Forge 任務 vs Quest 任務的 API 路徑"
+    context: |
+      Night Agent 完成了兩個任務：
+      - exp-r160: "實驗：Instinct 信心衰減記憶 GC"（有 forge_cost: 5）
+      - q-7: "整理 MEMORY.md 格式"（無 forge_cost）
+      它嘗試用 POST /api/task/complete 完成兩者。
+    expected_behavior: |
+      Forge 任務（有 forge_cost）必須用 POST /api/forge/complete，body: {"id":"exp-r160"}。
+      Quest 任務（無 forge_cost）必須用 POST /api/quest/complete，body: {"id":"q-7"}。
+      /api/task/* 端點已移除，不可使用。
+    anti_patterns:
+      - "使用 /api/task/complete（已廢棄）"
+      - "Forge 任務用 /api/quest/complete（forge mechanics 不會觸發）"
+      - "直接修改 state.json 跳過 API"
