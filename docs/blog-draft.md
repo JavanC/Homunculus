@@ -190,11 +190,12 @@ The nightly agent alone made **134 commits across 11 nights**. It evolved skills
 The system even evolved its own **task management board** — a gamified quest system where the nightly agent creates tasks, tracks progress, and marks completions:
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/5828b1e7-5808-478d-9340-505480a41a2c" alt="Quest Board — evolved task management system" width="700">
+  <img src="https://github.com/user-attachments/assets/5828b1e7-5808-478d-9340-505480a41a2c" alt="Quest Board — desktop" width="560">
+  <img src="https://github.com/user-attachments/assets/69c397ab-dde7-4dae-968b-9f7cf9b24e01" alt="Quest Board — mobile" width="160">
 </p>
 
 <p align="center">
-  <em>Desktop and mobile — the system built this to manage its own evolution tasks.</em>
+  <em>The system evolved its own gamified task board — desktop and mobile.</em>
 </p>
 
 It also has **meta-evolution**: it tracks whether its own evolution mechanism is working well (instinct survival rate, eval discrimination, skill convergence speed) and adjusts its own parameters accordingly. The evolution process evolves itself.

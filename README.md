@@ -365,7 +365,8 @@ The nightly agent alone: **134 commits across 11 nights**.
 The system even evolved its own task management board:
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/5828b1e7-5808-478d-9340-505480a41a2c" alt="Quest Board — evolved task management" width="700">
+  <img src="https://github.com/user-attachments/assets/5828b1e7-5808-478d-9340-505480a41a2c" alt="Quest Board — desktop" width="560">
+  <img src="https://github.com/user-attachments/assets/69c397ab-dde7-4dae-968b-9f7cf9b24e01" alt="Quest Board — mobile" width="160">
 </p>
 
 [See the full reference implementation →](examples/reference/)
