@@ -34,7 +34,7 @@ Week 3:  "I need skills, agents, MCP servers, custom commands..."
 Week 4:  "I spend more time configuring Claude than using it."
 ```
 
-Sound familiar? Even [OpenClaw](https://github.com/openclaw/openclaw) — with 300K+ stars and self-extending capabilities — still needs *you* to decide what to improve, when to improve it, and whether the improvement worked. The AI can extend itself, but it can't set its own direction or validate its own quality.
+Sound familiar? Even [OpenClaw](https://github.com/openclaw/openclaw) — with 300K+ stars and self-extending capabilities — still needs *you* to decide what to improve, when to improve it, and whether the improvement worked. Edit `SOUL.md`, tweak `AGENTS.md`, break something, open another AI session to fix it. The AI can extend itself, but it can't set its own direction or validate its own quality.
 
 **Here's the difference:**
 
@@ -56,12 +56,12 @@ Without Homunculus:                      With Homunculus:
 Most AI tools optimize locally — "you did X, so I'll remember X." Homunculus optimizes **globally** — toward goals you define in a tree:
 
 ```
-                        🎯 My AI Assistant
-                     ┌──────────┼──────────┐
-                     │          │          │
-                 Code Quality  Speed   Knowledge
-                 ┌───┴───┐     │      ┌───┴───┐
-              Testing  Review  Tasks  Research  Memory
+                    🎯 My AI Assistant
+              ┌──────────┼──────────┐
+              │          │          │
+         Code Quality   Speed    Knowledge
+          ┌────┴────┐    │     ┌────┴────┐
+       Testing  Review  Tasks  Research  Memory
 ```
 
 Each node defines **why** it exists, **how** to measure it, and **what** currently implements it:

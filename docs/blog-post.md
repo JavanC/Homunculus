@@ -63,14 +63,14 @@ That structure is a goal tree.
 [Homunculus](https://github.com/JavanC/Homunculus) replaces manual configuration with a goal tree. You define outcomes. The system builds its own path there.
 
 ```
-                    🎯 My AI Assistant
-              ┌──────────┼──────────┐
-              │          │          │
-        AI Intelligence  Self-     Productivity
-        │                Improvement    │
-   ┌────┴────┐      ┌────┴────┐       │
-News     Morning  Skill    Quality  Automation
-Curation Briefing Evolution
+                  🎯 My AI Assistant
+            ┌───────────┼───────────┐
+            │           │           │
+     AI Intelligence   Self-    Productivity
+      ┌─────┴─────┐  Improvement    │
+      │           │   ┌──┴──┐       │
+ News Curation  Morning  Skill  Quality  Automation
+                Briefing Evolution
 ```
 
 Each node says **what** you want. Not how.
