@@ -410,6 +410,9 @@ your-project/
 │   ├── rules/
 │   │   └── evolution-system.md # How Claude should evolve
 │   └── commands/
+│       ├── hm-goal.md          # /hm-goal — define or view goals
+│       ├── hm-night.md         # /hm-night — run evolution cycle
+│       ├── hm-status.md        # /hm-status — evolution dashboard
 │       ├── eval-skill.md       # /eval-skill
 │       ├── improve-skill.md    # /improve-skill
 │       └── evolve.md           # /evolve
