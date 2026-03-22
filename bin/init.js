@@ -76,7 +76,7 @@ This project uses Homunculus for goal-driven evolution.
 - **Goal Tree**: \`architecture.yaml\` — defines goals, metrics, and health checks
 - **Instincts**: \`homunculus/instincts/personal/\` — auto-extracted patterns
 - **Skills**: \`homunculus/evolved/skills/\` — tested, versioned knowledge
-- **Commands**: \`/hm-setup\` (define goals) | \`/hm-night\` (evolution cycle) | \`/hm-status\` (dashboard)
+- **Commands**: \`/hm-goal\` (define goals) | \`/hm-night\` (evolution cycle) | \`/hm-status\` (dashboard)
 `;
 
   if (fs.existsSync(claudeDest)) {
@@ -106,7 +106,7 @@ This project uses Homunculus for goal-driven evolution.
   // 5. Copy slash commands
   if (fs.existsSync(COMMANDS_DIR)) {
     copyDir(COMMANDS_DIR, path.join(projectDir, '.claude', 'commands'));
-    console.log('  \x1b[32m✓\x1b[0m Added slash commands (/hm-setup, /hm-night, /hm-status)');
+    console.log('  \x1b[32m✓\x1b[0m Added slash commands (/hm-goal, /hm-night, /hm-status)');
   }
 
   // 6. Configure Claude Code hooks
@@ -157,7 +157,7 @@ This project uses Homunculus for goal-driven evolution.
   console.log('');
   console.log('  Next steps:');
   console.log('    1. Run \x1b[1mclaude\x1b[0m to open Claude Code');
-  console.log('    2. Type \x1b[1m/hm-setup\x1b[0m to define your goals (AI-guided)');
+  console.log('    2. Type \x1b[1m/hm-goal\x1b[0m to define your goals (AI-guided)');
   console.log('    3. Type \x1b[1m/hm-night\x1b[0m to run your first evolution cycle');
   console.log('');
 }

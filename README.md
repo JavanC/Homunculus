@@ -160,23 +160,23 @@ Homunculus — Self-evolving AI Assistant
 ✓ Created homunculus/ directory structure
 ✓ Added evolution rules
 ✓ Copied evolution scripts
-✓ Added slash commands (/hm-setup, /hm-night, /hm-status)
+✓ Added slash commands (/hm-goal, /hm-night, /hm-status)
 ✓ Configured observation hook
 
 Done! Homunculus is installed.
 
 Next steps:
   1. Run claude to open Claude Code
-  2. Type /hm-setup to define your goals (AI-guided)
+  2. Type /hm-goal to define your goals (AI-guided)
   3. Type /hm-night to run your first evolution cycle
 ```
 
 ### 2. Define Your Goals
 
-Open Claude Code and type `/hm-setup`. Claude will have a short conversation with you to understand your project and goals, then generate your `architecture.yaml` automatically.
+Open Claude Code and type `/hm-goal`. Claude will have a short conversation with you to understand your project and goals, then generate your `architecture.yaml` automatically.
 
 ```
-> /hm-setup
+> /hm-goal
 
 Claude: What kind of project is this?
 You:    A SaaS app for team collaboration
@@ -215,7 +215,7 @@ The observation hook watches your usage automatically. As patterns emerge:
 ```
 /hm-night       Run an evolution cycle
 /hm-status      Check evolution progress
-/hm-setup       Refine your goals anytime
+/hm-goal       Refine your goals anytime
 /eval-skill     Evaluate a specific skill
 /improve-skill  Auto-improve a skill
 /evolve         Converge instincts into skills
