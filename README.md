@@ -17,7 +17,7 @@ You spend hours tweaking prompts, writing rules, researching new features, confi
 npx homunculus-code init
 ```
 
-One command. Answer a few questions. Start using Claude Code. Your assistant begins evolving.
+One command. Define your goals. Your assistant starts evolving.
 
 > **Proof it works:** One developer ran this system for 15 days. It auto-generated 168 behavioral patterns, converged them into 7 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent alone made 134 commits across 11 nights — improving the system while the developer slept. [See results →](#real-world-results)
 
@@ -34,7 +34,7 @@ Week 3:  "I need skills, agents, MCP servers, custom commands..."
 Week 4:  "I spend more time configuring Claude than using it."
 ```
 
-Sound familiar? Even with tools like OpenClaw that can generate new skills, you're still the one deciding *what* to improve, *when* to improve it, and *whether* the improvement actually worked. The AI can write code, but it can't set its own direction.
+Sound familiar? Even [OpenClaw](https://github.com/openclaw/openclaw) — with 300K+ stars and a skill generator — still needs *you* to decide what to improve, when to improve it, and whether the improvement actually worked. The AI can write skills, but it can't set its own direction or validate its own quality.
 
 **Here's the difference:**
 
@@ -177,31 +177,35 @@ Next steps:
 
 ### 2. Define Your Goals
 
-Open Claude Code and type `/hm-goal`. Claude will have a short conversation with you to understand your project and goals, then generate your `architecture.yaml` automatically.
+Open Claude Code and type `/hm-goal`. Claude asks one question at a time, then generates your goal tree:
 
 ```
 > /hm-goal
 
 Claude: What kind of project is this?
-You:    A SaaS app for team collaboration
+You:    A personal AI assistant
 
-Claude: What do you spend most time on?
-You:    Debugging auth issues and writing tests
+Claude: What do you spend most time on that you wish was better?
+You:    Keeping up with AI news, too much to follow
+
+Claude: If your AI could fix one thing overnight, what would it be?
+You:    Auto fetch new AI news and give me a morning report
 
 Claude: Here's your goal tree:
-        🎯 Team Collaboration SaaS
-        ├── code_quality — Ship fewer bugs
-        │   ├── testing — Every change has tests
-        │   └── auth_reliability — Auth works every time
-        ├── productivity — Move faster
-        │   └── debugging — Find root causes faster
-        └── knowledge — Stay current
-            └── tool_updates — Track Claude Code updates
+        🎯 Personal AI Assistant
+        ├── ai_intelligence — Stay ahead on AI developments
+        │   ├── news_curation — Auto-fetch top AI news daily
+        │   └── morning_briefing — Deliver a concise report every morning
+        ├── self_improvement — Get smarter over time
+        │   ├── skill_evolution — Learn new skills from observations
+        │   └── quality — Ensure evolved skills actually work
+        └── productivity — Save the user time
+            └── automation — Automate repetitive workflows
 
         Does this look right?
-You:    Yes!
+You:    Great!
 
-Claude: ✅ architecture.yaml created with 5 goals!
+Claude: ✅ architecture.yaml created with 3 goals!
 ```
 
 ### 3. Run Your First Evolution Cycle
@@ -471,6 +475,17 @@ OpenClaw is excellent at generating skills on demand — it's a powerful tool. H
 > "Your AI assistant should be a seed, not a statue."
 
 Stop spending your evenings tuning AI. Plant a seed, define your goals, and let it grow. The more you use it, the better it gets — and it tells you exactly how and why through eval scores, goal health checks, and morning reports.
+
+---
+
+## Acknowledgments
+
+Homunculus builds on ideas from several projects and research:
+
+- **[everything-claude-code](https://github.com/affaan-m/everything-claude-code)** — Continuous Learning pattern and Skill Creator's eval → improve loop. Homunculus adopted and extended these into a goal-tree-driven, autonomous evolution system.
+- **[OpenClaw](https://github.com/openclaw/openclaw)** — Demonstrated that AI assistants can generate their own skills. Homunculus adds goal direction, eval quality gates, and autonomous overnight operation.
+- **[Karpathy's Autoresearch](https://x.com/karpathy)** — Proved AI can run autonomous experiment loops (118 iterations, 12+ hours). Inspired the nightly agent's research cycle.
+- **[Anthropic's Eval Research](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)** — Eval methodology, noise tolerance (±6pp), and pass@k / pass^k metrics.
 
 ---
 
