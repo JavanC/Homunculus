@@ -23,11 +23,11 @@ Week 3:  "I need skills, agents, MCP servers, custom commands..."
 Week 4:  "I spend more time configuring Claude than using it."
 ```
 
-Sound familiar? Look at [everything-claude-code](https://github.com/affaan-m/everything-claude-code) — 28 agents, 116 skills, 59 commands. Incredible work. But someone had to manually build every single one. And when Claude Code updates, someone has to manually update them too.
+Sound familiar? Even with tools like OpenClaw that can generate new skills, you're still the one deciding *what* to improve, *when* to improve it, and *whether* the improvement actually worked. The AI can write code, but it can't set its own direction.
 
-**You're the bottleneck in your own AI workflow.** You read blog posts, watch tutorials, copy configs, tune prompts — all to make your AI slightly better. Meanwhile, your AI sits idle every night doing nothing.
+**You're the bottleneck in your own AI workflow.** You read changelogs, tune prompts, test new patterns, troubleshoot regressions — all to make your AI slightly better. Meanwhile, your AI sits idle every night doing nothing.
 
-Homunculus flips this: you define goals, and the system evolves itself — creating skills, agents, hooks, and scripts on its own. While you sleep.
+Homunculus flips this: you define goals, and the system evolves itself — creating skills, agents, hooks, and scripts on its own. It evaluates its own improvements, rolls back regressions, and researches better approaches. While you sleep.
 
 ---
 
