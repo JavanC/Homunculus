@@ -10,7 +10,19 @@ reference/
 ├── evolved-skills/            # 7 evolved skills (all 100% eval pass)
 │   ├── api-system-diagnosis.md
 │   ├── assistant-system-management.md
-│   ├── claude-code-reference.md
+│   ├── claude-code-reference/    # Split into index + 11 chapters (95% context reduction)
+│   │   ├── index.md              # Routing table — loads chapters on demand
+│   │   ├── ch01-extensions.md
+│   │   ├── ch02-agents.md
+│   │   ├── ch03-hooks.md
+│   │   ├── ch04-mcp.md
+│   │   ├── ch05-ui.md
+│   │   ├── ch06-rules-security.md
+│   │   ├── ch07-model-memory.md
+│   │   ├── ch08-workflows.md
+│   │   ├── ch09-integrations.md
+│   │   ├── ch10-cli-sdk.md
+│   │   └── ch11-output-versions.md
 │   ├── development-verification-patterns.md
 │   ├── multi-agent-design-patterns.md
 │   ├── shell-automation-patterns.md
