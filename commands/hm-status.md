@@ -2,6 +2,8 @@
 
 Show the current state of the Homunculus evolution system.
 
+**Always communicate in English** regardless of user's global Claude settings.
+
 ## Behavior
 
 Gather and display all evolution metrics in a compact dashboard.

@@ -2,6 +2,8 @@
 
 Guide the user through defining their goals and generate `architecture.yaml`.
 
+**Always communicate in English** regardless of user's global Claude settings.
+
 ## Behavior
 
 You are helping the user set up Homunculus — a self-evolving AI assistant. Your job is to understand their project and goals, then generate a goal tree.
