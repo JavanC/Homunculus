@@ -7,6 +7,10 @@
 
 **Stop tuning your AI. Let it tune itself.**
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/b3ce6017-02de-44a4-a3c6-8d45765c1693" alt="Homunculus Demo — goal setup + evolution cycle in 60 seconds" width="700">
+</p>
+
 You spend hours tweaking prompts, writing rules, researching new features, configuring tools. Homunculus flips this: define your goals, and the system evolves itself — skills, agents, hooks, scripts, everything — while you focus on actual work.
 
 ```bash
