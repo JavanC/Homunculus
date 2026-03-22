@@ -34,6 +34,8 @@ Demos look great. But consider the mechanics:
 
 We invented org charts because human brains are bottlenecked. AI brains are not. Forcing our constraints onto AI is the wrong abstraction.
 
+A better approach: start with a single agent. Let the system observe where it struggles. When a task keeps failing or burns too many tokens in the main thread, the system creates a specialized subagent for that specific job. Agents appear because the system needs them, not because you drew an org chart on day one.
+
 ---
 
 ## The Building Blocks Exist. The Spine Doesn't.
