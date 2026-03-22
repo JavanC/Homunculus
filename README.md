@@ -154,65 +154,74 @@ The evolution engine then:
 npx homunculus-code init
 ```
 
-The wizard asks you a few questions and sets everything up:
-
 ```
-🧬 Homunculus — Self-evolving AI Assistant
+Homunculus — Self-evolving AI Assistant
 
-? What's your project name? my-app
-? What's your main goal? Build a reliable SaaS product
+✓ Created homunculus/ directory structure
+✓ Added evolution rules
+✓ Copied evolution scripts
+✓ Added slash commands (/hm-setup, /hm-night, /hm-status)
+✓ Configured observation hook
 
-✅ Created homunculus/ structure
-✅ Generated architecture.yaml with your goals
-✅ Added observation hook to Claude Code
-✅ Copied evolution scripts
+Done! Homunculus is installed.
 
-Done! Start using Claude Code. Your assistant will evolve.
-```
-
-### 2. Run Your First Evolution Cycle
-
-```bash
-npx homunculus-code night
+Next steps:
+  1. Run claude to open Claude Code
+  2. Type /hm-setup to define your goals (AI-guided)
+  3. Type /hm-night to run your first evolution cycle
 ```
 
-Watch the system check your goals, scan for patterns, and generate a report:
+### 2. Define Your Goals
+
+Open Claude Code and type `/hm-setup`. Claude will have a short conversation with you to understand your project and goals, then generate your `architecture.yaml` automatically.
 
 ```
-🌙 Homunculus — Evolution Cycle
+> /hm-setup
 
-[1/5] Health Check
-      code_quality:    ○ no data yet
-      productivity:    ○ no data yet
+Claude: What kind of project is this?
+You:    A SaaS app for team collaboration
 
-[2/5] Scan Instincts
-      ○ No instincts yet — use Claude Code normally, patterns will emerge
+Claude: What do you spend most time on?
+You:    Debugging auth issues and writing tests
 
-[3/5] Eval Skills
-      ○ No skills yet — instincts converge into skills over time
+Claude: Here's your goal tree:
+        🎯 Team Collaboration SaaS
+        ├── code_quality — Ship fewer bugs
+        │   ├── testing — Every change has tests
+        │   └── auth_reliability — Auth works every time
+        ├── productivity — Move faster
+        │   └── debugging — Find root causes faster
+        └── knowledge — Stay current
+            └── tool_updates — Track Claude Code updates
 
-[4/5] Research
-      ✓ Claude Code 2.1.81
-      △ 0/7 goals have health checks — add more for better evolution
+        Does this look right?
+You:    Yes!
 
-[5/5] Report
-  ┌────────────────────────────────────────────┐
-  │  Evolution Report — 2026-03-22             │
-  │  Goals: 7 | Instincts: 0 | Skills: 0      │
-  │  Status: Fresh install — ready to evolve   │
-  └────────────────────────────────────────────┘
+Claude: ✅ architecture.yaml created with 5 goals!
 ```
 
-### 3. Use Claude Code Normally
+### 3. Run Your First Evolution Cycle
 
-The observation hook watches your usage automatically. As patterns emerge, run `night` again to see your system evolve. Or set up the [nightly agent](docs/nightly-agent.md) to do it autonomously while you sleep.
-
-```bash
-npx homunculus-code night    # Manual evolution cycle
-claude "/eval-skill"         # Evaluate a specific skill
-claude "/improve-skill"      # Auto-improve a skill
-claude "/evolve"             # Converge instincts into skills
 ```
+> /hm-night
+```
+
+Watch Claude check your goals, scan for patterns, evaluate skills, and generate a report — all in one command. This is what the nightly agent does autonomously while you sleep.
+
+### 4. Keep Using Claude Code
+
+The observation hook watches your usage automatically. As patterns emerge:
+
+```
+/hm-night       Run an evolution cycle
+/hm-status      Check evolution progress
+/hm-setup       Refine your goals anytime
+/eval-skill     Evaluate a specific skill
+/improve-skill  Auto-improve a skill
+/evolve         Converge instincts into skills
+```
+
+Set up the [nightly agent](docs/nightly-agent.md) to run `/hm-night` autonomously while you sleep.
 
 ---
 
