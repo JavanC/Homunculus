@@ -170,19 +170,49 @@ The wizard asks you a few questions and sets everything up:
 Done! Start using Claude Code. Your assistant will evolve.
 ```
 
-### 2. Use Claude Code Normally
-
-That's it. The system observes, extracts, and evolves in the background. Check progress anytime:
+### 2. Run Your First Evolution Cycle
 
 ```bash
-claude "/eval-skill"         # Run skill evaluations
+npx homunculus-code night
+```
+
+Watch the system check your goals, scan for patterns, and generate a report:
+
+```
+🌙 Homunculus — Evolution Cycle
+
+[1/5] Health Check
+      code_quality:    ○ no data yet
+      productivity:    ○ no data yet
+
+[2/5] Scan Instincts
+      ○ No instincts yet — use Claude Code normally, patterns will emerge
+
+[3/5] Eval Skills
+      ○ No skills yet — instincts converge into skills over time
+
+[4/5] Research
+      ✓ Claude Code 2.1.81
+      △ 0/7 goals have health checks — add more for better evolution
+
+[5/5] Report
+  ┌────────────────────────────────────────────┐
+  │  Evolution Report — 2026-03-22             │
+  │  Goals: 7 | Instincts: 0 | Skills: 0      │
+  │  Status: Fresh install — ready to evolve   │
+  └────────────────────────────────────────────┘
+```
+
+### 3. Use Claude Code Normally
+
+The observation hook watches your usage automatically. As patterns emerge, run `night` again to see your system evolve. Or set up the [nightly agent](docs/nightly-agent.md) to do it autonomously while you sleep.
+
+```bash
+npx homunculus-code night    # Manual evolution cycle
+claude "/eval-skill"         # Evaluate a specific skill
 claude "/improve-skill"      # Auto-improve a skill
 claude "/evolve"             # Converge instincts into skills
 ```
-
-### 3. Refine Your Goals (Optional)
-
-As you use the system, refine `architecture.yaml` — add sub-goals, metrics, and health checks. The more specific your goals, the smarter the evolution.
 
 ---
 

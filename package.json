@@ -1,9 +1,9 @@
 {
   "name": "homunculus-code",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A self-evolving AI assistant that grows smarter every night",
   "bin": {
-    "homunculus": "./bin/init.js"
+    "homunculus-code": "./bin/cli.js"
   },
   "keywords": [
     "ai",
