@@ -42,11 +42,11 @@ A better approach: start with a single agent. Let the system observe where it st
 
 The community is moving toward AI autonomy. Building blocks keep appearing:
 
-- [OpenClaw](https://github.com/openclaw/openclaw) lets AI **write its own skills** on demand
+- [OpenClaw](https://github.com/openclaw/openclaw) lets AI **extend its own capabilities** autonomously
 - [everything-claude-code](https://github.com/affaan-m/everything-claude-code) **extracts behavioral patterns** from usage and persists them
 - [Karpathy's autoresearch](https://x.com/karpathy) proved AI can **run 118 experiment iterations** over 12 hours, no human involved
 
-Each one solves a real problem. But they're **disconnected**. OpenClaw generates skills and can't tell whether they made things better. Pattern extraction captures behaviors and can't tell which ones matter. Autoresearch runs experiments and has no system telling it which experiments to run.
+Each one solves a real problem. But they're **disconnected**. OpenClaw extends capabilities and can't tell whether they made things better. Pattern extraction captures behaviors and can't tell which ones matter. Autoresearch runs experiments and has no system telling it which experiments to run.
 
 The missing piece is a **spine**. A structure connecting these capabilities, giving them direction. Answering: where are we heading? Which parts work? Which don't? Try this next.
 

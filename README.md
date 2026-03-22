@@ -34,7 +34,7 @@ Week 3:  "I need skills, agents, MCP servers, custom commands..."
 Week 4:  "I spend more time configuring Claude than using it."
 ```
 
-Sound familiar? Even [OpenClaw](https://github.com/openclaw/openclaw) — with 300K+ stars and a skill generator — still needs *you* to decide what to improve, when to improve it, and whether the improvement actually worked. The AI can write skills, but it can't set its own direction or validate its own quality.
+Sound familiar? Even [OpenClaw](https://github.com/openclaw/openclaw) — with 300K+ stars and self-extending capabilities — still needs *you* to decide what to improve, when to improve it, and whether the improvement worked. The AI can extend itself, but it can't set its own direction or validate its own quality.
 
 **Here's the difference:**
 
@@ -379,14 +379,14 @@ The system even evolved its own task management board:
 | | Homunculus | OpenClaw | Cursor Rules | Claude Memory |
 |---|---|---|---|---|
 | **Goal-driven** | Goal tree with metrics + health checks | No | No | No |
-| **Learns from usage** | Auto-observation → instincts → skills | Skill generation | Manual | Auto-memory |
+| **Learns from usage** | Auto-observation → instincts → skills | Self-extending | Manual | Auto-memory |
 | **Quality control** | Eval specs + scenario tests | None | None | None |
 | **Autonomous overnight** | Nightly agent: eval + improve + research + experiment | No | No | No |
 | **Self-improving** | Eval → improve → replace loop | Partial | No | No |
 | **Meta-evolution** | Evolution mechanism evolves itself | No | No | No |
 | **Implementation agnostic** | Skills, agents, hooks, scripts, MCP, cron... | Skills only | Rules only | Memory only |
 
-OpenClaw is great at generating skills on demand. Homunculus goes further: it decides *what* to improve based on goal health, *validates* improvements with evals, and does it all *autonomously* overnight. They solve different problems — OpenClaw is a power tool, Homunculus is an operating system for evolution.
+OpenClaw is great at self-extending. Homunculus goes further: it decides *what* to improve based on goal health, *validates* improvements with evals, and does it all *autonomously* overnight. They solve different problems. OpenClaw is a power tool. Homunculus is an operating system for evolution.
 
 ---
 
@@ -476,7 +476,7 @@ Claude's memory records facts. Homunculus evolves *behavior* — tested skills, 
 <details>
 <summary><strong>How does this compare to OpenClaw?</strong></summary>
 
-OpenClaw is excellent at generating skills on demand — it's a powerful tool. Homunculus solves a different problem: autonomous, goal-directed evolution. It decides what needs improving (via goal health), validates improvements (via evals), and does the work overnight (via the nightly agent). You could use both — OpenClaw for on-demand skill generation, Homunculus for the autonomous evolution layer on top.
+OpenClaw is excellent at self-extending. Homunculus solves a different problem: autonomous, goal-directed evolution. It decides what needs improving (via goal health), validates improvements (via evals), and does the work overnight (via the nightly agent). You could use both: OpenClaw for on-demand capability extension, Homunculus for the autonomous evolution layer on top.
 </details>
 
 ---
@@ -494,7 +494,7 @@ Stop spending your evenings tuning AI. Plant a seed, define your goals, and let 
 Homunculus builds on ideas from several projects and research:
 
 - **[everything-claude-code](https://github.com/affaan-m/everything-claude-code)** — Continuous Learning pattern and Skill Creator's eval → improve loop. Homunculus adopted and extended these into a goal-tree-driven, autonomous evolution system.
-- **[OpenClaw](https://github.com/openclaw/openclaw)** — Demonstrated that AI assistants can generate their own skills. Homunculus adds goal direction, eval quality gates, and autonomous overnight operation.
+- **[OpenClaw](https://github.com/openclaw/openclaw)** — Demonstrated that AI assistants can extend their own capabilities. Homunculus adds goal direction, eval quality gates, and autonomous overnight operation.
 - **[Karpathy's Autoresearch](https://x.com/karpathy)** — Proved AI can run autonomous experiment loops (118 iterations, 12+ hours). Inspired the nightly agent's research cycle.
 - **[Anthropic's Eval Research](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)** — Eval methodology, noise tolerance (±6pp), and pass@k / pass^k metrics.
 
