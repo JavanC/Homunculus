@@ -1,117 +1,118 @@
-# Homunculus
+# Homunculus for Claude Code
 
-**A self-evolving AI assistant that grows smarter every night.**
+**Stop tuning your AI. Let it tune itself.**
 
-Your AI assistant starts the same every day. Homunculus makes it evolve — automatically observing your patterns, extracting reusable skills, and improving itself while you sleep.
+You spend hours tweaking prompts, writing rules, researching new features, configuring tools. Homunculus flips this: define your goals, and the system evolves itself — skills, agents, hooks, scripts, everything — while you focus on actual work.
 
-```
+```bash
 npx homunculus init
 ```
 
-That's it. Start using Claude Code normally. Your assistant begins evolving.
+One command. Answer a few questions. Start using Claude Code. Your assistant begins evolving.
 
 ---
 
-## What It Does
+## Why
 
-### The Core Idea: Goal Tree
+Every Claude Code user hits the same wall:
 
-You define **what you want** in a goal tree. The system figures out **how to get there** — and keeps improving the "how" while the "what" stays stable.
+```
+Week 1:  "Claude is amazing!"
+Week 2:  "Let me add some rules..."
+Week 3:  "I need better prompts, more hooks, custom commands..."
+Week 4:  "I spend more time configuring Claude than using it."
+```
+
+The irony: **you're the bottleneck in your own AI workflow.** You read blog posts, watch tutorials, copy configs — all to make your AI slightly better. Meanwhile, your AI sits idle every night.
+
+Homunculus fixes this. You define goals. The system figures out the rest.
+
+---
+
+## The Core Idea: Goal Tree
+
+Most AI tools optimize locally — "you did X, so I'll remember X." Homunculus optimizes **globally** — toward goals you define in a tree:
+
+```
+                        🎯 My AI Assistant
+                     ┌──────────┼──────────┐
+                     │          │          │
+                 Code Quality  Speed   Knowledge
+                 ┌───┴───┐     │      ┌───┴───┐
+              Testing  Review  Tasks  Research  Memory
+```
+
+Each node in the tree has:
 
 ```yaml
-# architecture.yaml — your goals, not your tools
-root:
-  purpose: "My evolving AI assistant"
-
+# architecture.yaml
+code_quality:
+  purpose: "Ship fewer bugs"                     # WHY this goal exists
+  metrics:
+    - name: test_pass_rate
+      healthy: "> 95%"                            # HOW to measure success
+  health_check:
+    command: "npm test"                           # Machine-verifiable check
   goals:
-    code_quality:
-      purpose: "Ship fewer bugs"
-      metrics:
-        - name: test_coverage
-          healthy: "> 80%"
-      health_check:
-        command: "npm test"             # machine-verifiable
-      goals:
-        testing:
-          purpose: "Every change has tests"
-          realized_by: skills/tdd-workflow.md    # ← HOW (can be replaced)
-        review:
-          purpose: "Catch issues before merge"
-          realized_by: hooks/pre-commit.sh       # ← HOW (can be replaced)
-
-    productivity:
-      purpose: "Complete tasks faster"
-      goals:
-        automation:
-          realized_by: scripts/auto-deploy.sh    # ← HOW
-        debugging:
-          realized_by: agents/shell-debugger.md  # ← HOW
+    testing:
+      purpose: "Every change has tests"
+      realized_by: skills/tdd-workflow.md         # WHAT currently implements it
+    review:
+      purpose: "Catch issues before merge"
+      realized_by: hooks/pre-commit.sh            # Can be ANYTHING
 ```
 
-Each goal has a **purpose** (why), **metrics** (how to measure), and **realized_by** (current implementation). The implementations can be anything:
+The `realized_by` field is the key — it can point to **any implementation**:
 
-| Implementation | Example |
-|---------------|---------|
-| **Skills** | Evolved knowledge modules with eval specs |
-| **Agents** | Specialized subagents (different models, tools) |
-| **Hooks** | Pre/post tool-use automation |
-| **Scripts** | Shell/Node automation |
-| **Cron / LaunchAgents** | Scheduled tasks (nightly research, health checks) |
-| **MCP Servers** | External tool integrations |
-| **Rules** | Claude Code behavioral rules |
-| **Slash Commands** | Custom workflow triggers |
+| Type | Example | When to use |
+|------|---------|-------------|
+| Skill | `skills/tdd-workflow.md` | Behavioral knowledge |
+| Agent | `agents/code-reviewer.md` | Specialized AI subagent |
+| Hook | `hooks/pre-commit.sh` | Automated trigger |
+| Script | `scripts/deploy.sh` | Shell automation |
+| Cron | `launchd/nightly-check.plist` | Scheduled task |
+| MCP | `mcp-servers/github` | External integration |
+| Rule | `rules/security.md` | Claude Code behavioral rule |
+| Command | `commands/quality-gate.md` | Slash command workflow |
 
-**The evolution system keeps goals stable while evolving implementations.** If a skill isn't working, it gets improved. If a script is better replaced by an agent, the system can restructure. Goals are the constant; everything else is a means.
-
-### How It Evolves
-
-```
-                    ┌─────────────────────────────┐
-                    │   Goal Tree                  │
-                    │   (what you want)            │
-                    └──────────┬──────────────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              ▼                ▼                ▼
-        ┌──────────┐    ┌──────────┐    ┌──────────┐
-        │  Observe  │    │  Health   │    │ Research │
-        │  usage    │    │  checks   │    │ (nightly)│
-        └────┬─────┘    └────┬─────┘    └────┬─────┘
-             │               │               │
-             ▼               ▼               ▼
-        ┌─────────────────────────────────────────┐
-        │         Evolution Engine                 │
-        │                                          │
-        │  • Extract patterns → instincts          │
-        │  • Converge instincts → skills           │
-        │  • Eval skills → improve or replace      │
-        │  • Prune outdated implementations        │
-        │  • Propose new tools (agents, scripts)   │
-        └─────────────────────────────────────────┘
-             │
-             ▼
-        Goals stay the same.
-        Implementations get better.
-```
-
-Three inputs drive evolution:
-
-1. **Observation** — hooks watch your tool usage, extract recurring patterns
-2. **Health checks** — each goal has metrics; unhealthy goals get priority
-3. **Research** — nightly agent scans for better approaches, proposes experiments
+**Goals are stable. Implementations evolve.** The same goal can go from a mental note → instinct → skill → hook → agent. The system replaces and upgrades implementations while keeping goals intact.
 
 ---
 
-## What Makes This Different
+## How It Evolves
 
-| | Homunculus | OpenClaw | Cursor Rules | Claude Memory |
-|---|---|---|---|---|
-| **Learns from usage** | Automatic observation → instincts | Skill generation | Manual rules | Auto-memory |
-| **Quality control** | Eval specs + scenario tests | None | None | None |
-| **Goal-driven** | Goal tree architecture | No | No | No |
-| **Self-improving** | Eval → improve loop | Partial | No | No |
-| **Autonomous** | Nightly agent research | Partial | No | No |
-| **Meta-evolution** | Evolution mechanism evolves itself | No | No | No |
+```
+    You use Claude Code normally
+                │
+    ┌───────────┼───────────┐
+    ▼           ▼           ▼
+ Observe    Health Check  Research
+ (hooks)    (goal tree)   (nightly)
+    │           │           │
+    └───────────┼───────────┘
+                ▼
+         ┌────────────┐
+         │  Evolve     │   Goals stay the same.
+         │  ────────── │   Implementations get better.
+         │  Extract    │
+         │  Converge   │
+         │  Eval       │
+         │  Replace    │
+         └────────────┘
+```
+
+**Three inputs, one engine:**
+
+1. **Observe** — hooks watch your tool usage, extract recurring patterns into "instincts"
+2. **Health check** — the goal tree identifies which goals are unhealthy → focus there
+3. **Research** — a nightly agent scans for better approaches and proposes experiments
+
+The evolution engine then:
+- Extracts behavioral patterns → **instincts** (confidence-scored, auto-decay)
+- Converges related instincts → **skills** (tested with eval specs)
+- Evaluates and improves skills → **eval → improve loop** until 100% pass
+- Proposes replacements → instinct becomes hook, script becomes agent
+- Prunes outdated implementations → automatic archival
 
 ---
 
@@ -123,120 +124,61 @@ Three inputs drive evolution:
 npx homunculus init
 ```
 
-This creates the evolution structure in your project and configures Claude Code hooks.
+The wizard asks you a few questions and sets everything up:
 
-### 2. Define Your Goals
+```
+🧬 Homunculus — Self-evolving AI Assistant
 
-Edit `architecture.yaml` — tell the system what you care about:
+? What's your project name? my-app
+? What's your main goal? Build a reliable SaaS product
 
-```yaml
-version: "1.0"
+✅ Created homunculus/ structure
+✅ Generated architecture.yaml with your goals
+✅ Added observation hook to Claude Code
+✅ Copied evolution scripts
 
-root:
-  purpose: "My evolving AI assistant"
-
-  goals:
-    code_quality:
-      purpose: "Write better, more maintainable code"
-      metrics:
-        - name: test_coverage
-          healthy: "> 80%"
-
-    productivity:
-      purpose: "Complete tasks faster with fewer iterations"
-      metrics:
-        - name: avg_tool_calls_per_task
-          healthy: "decreasing trend"
-
-    # Add your own goals...
+Done! Start using Claude Code. Your assistant will evolve.
 ```
 
-### 3. Use Claude Code Normally
+### 2. Use Claude Code Normally
 
-That's it. The system observes, extracts patterns, and evolves. Check progress anytime:
+That's it. The system observes, extracts, and evolves in the background. Check progress anytime:
 
 ```bash
-claude "/instinct-status"    # See active instincts
 claude "/eval-skill"         # Run skill evaluations
+claude "/improve-skill"      # Auto-improve a skill
+claude "/evolve"             # Converge instincts into skills
 ```
+
+### 3. Refine Your Goals (Optional)
+
+As you use the system, refine `architecture.yaml` — add sub-goals, metrics, and health checks. The more specific your goals, the smarter the evolution.
 
 ---
 
-## Evolution Mechanisms
+## What Gets Generated
 
-The goal tree drives evolution, but the actual improvements happen through several mechanisms:
-
-### Instincts → Skills (Behavioral Learning)
-
-The system observes your tool usage. Recurring patterns become **instincts** (confidence-scored). Related instincts converge into **skills** — tested, versioned knowledge modules.
-
-```
-observe usage → instinct (confidence: 0.7) → grows with reinforcement
-                                            → decays without use (half-life: 90d)
-
-multiple related instincts → converge → skill (with eval spec)
-                                      → eval → improve loop until 100%
-```
-
-### Health Checks → Targeted Improvement
-
-Each goal can have a machine-executable health check. Unhealthy goals get evolution priority:
-
-```yaml
-code_quality:
-  health_check:
-    command: "npm test && echo healthy"
-    expected: "all tests pass"
-```
-
-The system asks: *which goals are failing?* → focus improvement there.
-
-### Nightly Agent → Autonomous Research
-
-A scheduled agent runs overnight, checking goal health, researching better implementations, and proposing experiments — all without human intervention.
-
-### Replaceable Implementations
-
-This is the key insight: **goals are stable, implementations are disposable.**
-
-```
-Goal: "Catch bugs before merge"
-
-  v1: realized_by: instinct (run tests manually)
-  v2: realized_by: skill/pre-commit-checks.md
-  v3: realized_by: hooks/pre-commit.sh          ← automated
-  v4: realized_by: agents/code-reviewer.md       ← AI-powered
-
-Same goal. Four different implementations.
-The system evolved from a mental note → automated agent.
-```
-
-The evolution system can restructure, replace, or upgrade any implementation as long as the goal's health check still passes.
-
----
-
-## Project Structure
-
-After `npx homunculus init`, your project gets:
+After `npx homunculus init`:
 
 ```
 your-project/
-├── architecture.yaml           # Your goal tree
+├── architecture.yaml           # Your goal tree (the brain)
 ├── homunculus/
 │   ├── instincts/
-│   │   └── personal/           # Auto-generated instincts
+│   │   ├── personal/           # Auto-extracted patterns
+│   │   └── archived/           # Auto-pruned old patterns
 │   ├── evolved/
-│   │   ├── skills/             # Converged skills
+│   │   ├── skills/             # Converged, tested knowledge
 │   │   ├── agents/             # Specialized subagents
 │   │   └── evals/              # Skill evaluation specs
 │   └── experiments/            # A/B test tracking
 ├── .claude/
 │   ├── rules/
-│   │   └── evolution-system.md # Evolution behavior rules
+│   │   └── evolution-system.md # How Claude should evolve
 │   └── commands/
-│       ├── eval-skill.md       # /eval-skill command
-│       ├── improve-skill.md    # /improve-skill command
-│       └── evolve.md           # /evolve command
+│       ├── eval-skill.md       # /eval-skill
+│       ├── improve-skill.md    # /improve-skill
+│       └── evolve.md           # /evolve
 └── scripts/
     ├── observe.sh              # Observation hook
     ├── evaluate-session.js     # Pattern extraction
@@ -245,58 +187,123 @@ your-project/
 
 ---
 
+## Key Concepts
+
+### Goal Tree (`architecture.yaml`)
+
+The central nervous system. Every goal has a purpose, metrics, and health checks. The evolution system reads this to decide **what** to improve and **how** to measure success.
+
+### Instincts
+
+Small behavioral patterns auto-extracted from your usage. They have confidence scores that grow with reinforcement and decay over time (half-life: 90 days). Think of them as the system's "muscle memory."
+
+### Skills
+
+When multiple instincts cover the same area, they converge into a skill — a tested, versioned knowledge module. Every skill has an eval spec with scenario tests. Skills that fail eval get automatically improved.
+
+### Eval Specs
+
+Scenario-based tests for skills. Each scenario defines context, expected behavior, and anti-patterns. The system runs evals and auto-improves until 100% pass rate.
+
+### Replaceable Implementations
+
+The core principle: **same goal, evolving implementation.**
+
+```
+Goal: "Catch bugs before merge"
+
+  v1: instinct → "remember to run tests"
+  v2: skill    → tdd-workflow.md (with eval spec)
+  v3: hook     → pre-commit.sh (automated)
+  v4: agent    → code-reviewer.md (AI-powered)
+```
+
+### Nightly Agent (Advanced)
+
+A scheduled agent that runs overnight via `launchd` or `cron`:
+- Checks goal health → identifies weak spots
+- Researches better implementations
+- Runs experiments in isolated worktrees
+- Generates morning reports with action items
+
+See [docs/nightly-agent.md](docs/nightly-agent.md) for setup.
+
+### Meta-Evolution (Advanced)
+
+The evolution mechanism itself evolves:
+- Instinct survival rate too low? → Raise extraction thresholds
+- Eval discrimination too low? → Add harder scenarios
+- Tracked via: `instinct_survival_rate`, `skill_convergence`, `eval_discrimination`
+
+---
+
 ## Real-World Results
 
-This system was built and tested on a real personal AI assistant. In **15 days**:
+Built and tested on a real personal AI assistant. In **15 days**:
 
-- **168 instincts** auto-generated from usage (84 active, 84 auto-archived)
-- **7 evolved skills** — all passing eval at 100% (93 test scenarios)
-- **3 specialized subagents** — auto-extracted from repetitive patterns
-- **15 slash commands** — workflow automations
-- **19 automation scripts** — session lifecycle, health checks, reports
-- **11 hooks** — observation, compaction, quality gates
-- **1,235 commits** — the system iterates fast
+| What evolved | Count | Details |
+|-------------|-------|---------|
+| Instincts | **168** | 84 active + 84 auto-archived |
+| Skills | **7** | All 100% eval pass (93 scenarios) |
+| Subagents | **3** | Auto-extracted from patterns |
+| Slash commands | **15** | Workflow automations |
+| Scripts | **19** | Session lifecycle, health checks |
+| Hooks | **11** | Observation, compaction, quality gates |
+| Commits | **1,235** | System iterates fast |
 
-The nightly agent alone produced **134 commits across 11 nights** — improving the system autonomously while the developer slept.
+The nightly agent alone: **134 commits across 11 nights** — evolving the system while the developer slept.
 
 [See the full reference implementation →](examples/reference/)
 
 ---
 
-## Advanced: Nightly Agent
+## What Makes This Different
 
-For autonomous overnight evolution, Homunculus supports a **heartbeat** system:
-
-- Scheduled via `launchd` (macOS) or `cron`
-- Runs health checks against your goal tree
-- Identifies weak goals and proposes improvements
-- Executes experiments in isolated worktrees
-- Generates morning reports with action items
-
-See [docs/nightly-agent.md](docs/nightly-agent.md) for setup.
-
----
-
-## Advanced: Meta-Evolution
-
-The evolution mechanism itself evolves:
-
-- **Instinct survival rate** too low? → Raise extraction thresholds
-- **Eval discrimination** too low? → Add harder boundary scenarios
-- **Skill convergence** too slow? → Adjust aggregation triggers
-
-This is tracked via three metrics:
-1. `instinct_survival_rate` — % of instincts that survive 14 days
-2. `skill_convergence` — time from first instinct to evolved skill
-3. `eval_discrimination` — % of eval scenarios that distinguish versions
+| | Homunculus | OpenClaw | Cursor Rules | Claude Memory |
+|---|---|---|---|---|
+| **Goal-driven** | Goal tree with metrics + health checks | No | No | No |
+| **Learns from usage** | Auto-observation → instincts → skills | Skill generation | Manual | Auto-memory |
+| **Quality control** | Eval specs + scenario tests | None | None | None |
+| **Self-improving** | Eval → improve → replace loop | Partial | No | No |
+| **Autonomous** | Nightly agent + experiments | Partial | No | No |
+| **Meta-evolution** | Evolution mechanism evolves itself | No | No | No |
+| **Implementation agnostic** | Skills, agents, hooks, scripts, MCP... | Skills only | Rules only | Memory only |
 
 ---
 
 ## Requirements
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (v2.1.70+)
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) v2.1.70+
 - Node.js 18+
 - macOS or Linux
+
+---
+
+## FAQ
+
+<details>
+<summary><strong>Is this only for Claude Code?</strong></summary>
+
+The concepts (goal tree, eval-driven evolution, replaceable implementations) are tool-agnostic. The current implementation targets Claude Code hooks and commands, but the core pipeline could be adapted to other AI harnesses.
+</details>
+
+<details>
+<summary><strong>Does it cost extra API credits?</strong></summary>
+
+The observation hook is lightweight (no API calls). Instinct extraction uses a short Claude call per session (~$0.01). The nightly agent is optional and budget-configurable.
+</details>
+
+<details>
+<summary><strong>Can I use my existing CLAUDE.md and rules?</strong></summary>
+
+Yes. `npx homunculus init` adds to your project without overwriting existing files. Your current setup becomes the starting point for evolution.
+</details>
+
+<details>
+<summary><strong>How is this different from Claude Code's built-in memory?</strong></summary>
+
+Claude's memory records facts. Homunculus evolves *behavior* — tested skills, automated hooks, specialized agents — all driven by goals you define, with quality gates that prevent regression.
+</details>
 
 ---
 
@@ -304,13 +311,7 @@ This is tracked via three metrics:
 
 > "Your AI assistant should be a seed, not a statue."
 
-Homunculus is not a framework you configure once. It's a living system that grows with you. The more you use it, the better it gets — and it tells you exactly how and why through eval scores, goal health checks, and evolution reports.
-
----
-
-## License
-
-MIT
+Stop spending your evenings tuning AI. Plant a seed, define your goals, and let it grow. The more you use it, the better it gets — and it tells you exactly how and why through eval scores, goal health checks, and evolution reports.
 
 ---
 
@@ -318,6 +319,10 @@ MIT
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## License
+
+MIT
+
 ---
 
-Built by [Javan](https://github.com/JavanC) and his AI assistant.
+**Built by [Javan](https://github.com/JavanC) and his self-evolving AI assistant.**
