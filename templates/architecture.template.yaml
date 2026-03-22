@@ -1,0 +1,41 @@
+# architecture.yaml — Your goal tree
+# Each node is a GOAL, not a system. Systems are means to achieve goals.
+# The evolution system uses this to decide what to improve.
+#
+# Node schema:
+#   purpose:      Why this goal exists
+#   realized_by:  What implements it (file path, system, or description)
+#   metrics:      How to measure success [{name, source, healthy}]
+#   goals:        Sub-goals (recursive)
+#   health_check: Machine-executable check
+#                 - command:  shell command (exit 0 = healthy)
+#                 - expected: human-readable description
+
+version: "1.0"
+
+root:
+  purpose: "{{PROJECT_PURPOSE}}"
+
+  goals:
+    # === Add your goals below ===
+    # Example:
+    #
+    # code_quality:
+    #   purpose: "Write better, more maintainable code"
+    #   metrics:
+    #     - name: test_coverage
+    #       source: coverage report
+    #       healthy: "> 80%"
+    #   health_check:
+    #     command: "npm test 2>/dev/null; echo $?"
+    #     expected: "all tests pass"
+    #
+    # productivity:
+    #   purpose: "Complete tasks faster with fewer iterations"
+    #   goals:
+    #     task_completion:
+    #       purpose: "Finish tasks in fewer back-and-forth cycles"
+    #     tool_mastery:
+    #       purpose: "Use the right tool for the job on first try"
+
+    # Your goals here:

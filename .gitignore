@@ -1,0 +1,8 @@
+node_modules/
+*.log
+.DS_Store
+
+# Runtime data (generated per-user)
+homunculus/observations.jsonl*
+data/hook-profile*
+data/auto-learn-cooldown.json

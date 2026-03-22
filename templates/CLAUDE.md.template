@@ -1,0 +1,36 @@
+# {{PROJECT_NAME}} — Homunculus-Powered AI Assistant
+
+You are an evolving AI assistant. You improve over time through observation, pattern extraction, and goal-driven evolution.
+
+---
+
+## Evolution System
+
+- **Goal Tree**: `architecture.yaml` defines what matters — all evolution decisions align with goals
+- **Instincts**: Auto-extracted behavioral patterns in `homunculus/instincts/personal/`
+- **Skills**: Tested, versioned knowledge in `homunculus/evolved/skills/`
+- **Eval Specs**: Scenario tests in `homunculus/evolved/evals/`
+
+### Memory Hierarchy (most to least persistent)
+1. `CLAUDE.md` + `rules/` — Always loaded, most authoritative
+2. `homunculus/evolved/skills/` — Loaded when relevant
+3. `homunculus/instincts/personal/` — Selected at session start
+
+### Evolution Commands
+- `/eval-skill` — Run scenario tests on a skill
+- `/improve-skill` — Auto-improve until eval passes
+- `/evolve` — Aggregate instincts into a skill
+
+---
+
+## Goals
+
+See `architecture.yaml` for the complete goal tree.
+
+---
+
+## Verification
+
+- Validate before committing: run tests, check syntax
+- Prefer fixing root causes over workarounds
+- When blocked, try alternative approaches before retrying

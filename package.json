@@ -1,0 +1,25 @@
+{
+  "name": "homunculus",
+  "version": "0.1.0",
+  "description": "A self-evolving AI assistant that grows smarter every night",
+  "bin": {
+    "homunculus": "./bin/init.js"
+  },
+  "keywords": [
+    "ai",
+    "claude-code",
+    "self-evolving",
+    "ai-assistant",
+    "goal-tree",
+    "evolution"
+  ],
+  "author": "Javan <https://github.com/JavanC>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JavanC/Homunculus.git"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
