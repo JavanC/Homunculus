@@ -10,6 +10,8 @@ npx homunculus init
 
 One command. Answer a few questions. Start using Claude Code. Your assistant begins evolving.
 
+> **Proof it works:** One developer ran this system for 15 days. It auto-generated 168 behavioral patterns, converged them into 7 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent alone made 134 commits across 11 nights — improving the system while the developer slept. [See results →](#real-world-results)
+
 ---
 
 ## Why
@@ -25,9 +27,18 @@ Week 4:  "I spend more time configuring Claude than using it."
 
 Sound familiar? Even with tools like OpenClaw that can generate new skills, you're still the one deciding *what* to improve, *when* to improve it, and *whether* the improvement actually worked. The AI can write code, but it can't set its own direction.
 
-**You're the bottleneck in your own AI workflow.** You read changelogs, tune prompts, test new patterns, troubleshoot regressions — all to make your AI slightly better. Meanwhile, your AI sits idle every night doing nothing.
+**Here's the difference:**
 
-Homunculus flips this: you define goals, and the system evolves itself — creating skills, agents, hooks, and scripts on its own. It evaluates its own improvements, rolls back regressions, and researches better approaches. While you sleep.
+```
+Without Homunculus:                      With Homunculus:
+
+  You notice tests keep failing          Goal tree detects test_pass_rate dropped
+  → You research testing patterns        → Nightly agent auto-evolves tdd skill
+  → You write a pre-commit skill         → Eval confirms 100% pass
+  → You test it manually                 → Morning report: "Fixed. Here's what changed."
+  → It breaks after a Claude update      → Next update? System re-evaluates and adapts
+  → You fix it again...                  → You slept through all of this
+```
 
 ---
 
@@ -44,27 +55,39 @@ Most AI tools optimize locally — "you did X, so I'll remember X." Homunculus o
               Testing  Review  Tasks  Research  Memory
 ```
 
-Each node in the tree has:
+Each node defines **why** it exists, **how** to measure it, and **what** currently implements it:
 
 ```yaml
-# architecture.yaml
-code_quality:
-  purpose: "Ship fewer bugs"                     # WHY this goal exists
-  metrics:
-    - name: test_pass_rate
-      healthy: "> 95%"                            # HOW to measure success
-  health_check:
-    command: "npm test"                           # Machine-verifiable check
+# architecture.yaml — from the reference system
+autonomous_action:
+  purpose: "Act without waiting for human commands"
   goals:
-    testing:
-      purpose: "Every change has tests"
-      realized_by: skills/tdd-workflow.md         # WHAT currently implements it
-    review:
-      purpose: "Catch issues before merge"
-      realized_by: hooks/pre-commit.sh            # Can be ANYTHING
+    nightly_research:
+      purpose: "Discover better approaches while developer sleeps"
+      realized_by: heartbeat/heartbeat.sh        # a shell script
+      health_check:
+        command: "test $(find logs/ -mtime -1 | wc -l) -gt 0"
+        expected: "nightly agent ran in last 24h"
+
+    task_management:
+      purpose: "Track and complete tasks autonomously"
+      realized_by: quest-board/server.js          # a web app
+      metrics:
+        - name: forge_completion_rate
+          healthy: "> 70%"
+
+continuous_evolution:
+  purpose: "Improve over time without human intervention"
+  goals:
+    pattern_extraction:
+      purpose: "Learn from every session"
+      realized_by: scripts/evaluate-session.js    # a Node script
+    skill_aggregation:
+      purpose: "Converge patterns into tested skills"
+      realized_by: homunculus/evolved/skills/      # evolved artifacts
 ```
 
-The `realized_by` field is the key — it can point to **any implementation**:
+The `realized_by` field can point to **anything**:
 
 | Type | Example | When to use |
 |------|---------|-------------|
@@ -158,37 +181,6 @@ As you use the system, refine `architecture.yaml` — add sub-goals, metrics, an
 
 ---
 
-## What Gets Generated
-
-After `npx homunculus init`:
-
-```
-your-project/
-├── architecture.yaml           # Your goal tree (the brain)
-├── homunculus/
-│   ├── instincts/
-│   │   ├── personal/           # Auto-extracted patterns
-│   │   └── archived/           # Auto-pruned old patterns
-│   ├── evolved/
-│   │   ├── skills/             # Converged, tested knowledge
-│   │   ├── agents/             # Specialized subagents
-│   │   └── evals/              # Skill evaluation specs
-│   └── experiments/            # A/B test tracking
-├── .claude/
-│   ├── rules/
-│   │   └── evolution-system.md # How Claude should evolve
-│   └── commands/
-│       ├── eval-skill.md       # /eval-skill
-│       ├── improve-skill.md    # /improve-skill
-│       └── evolve.md           # /evolve
-└── scripts/
-    ├── observe.sh              # Observation hook
-    ├── evaluate-session.js     # Pattern extraction
-    └── prune-instincts.js      # Automatic cleanup
-```
-
----
-
 ## Key Concepts
 
 ### Goal Tree (`architecture.yaml`)
@@ -220,7 +212,9 @@ Goal: "Catch bugs before merge"
   v4: agent    → code-reviewer.md (AI-powered)
 ```
 
-### Nightly Agent
+---
+
+## Nightly Agent
 
 This is what makes the system truly autonomous. Without it, you'd still need to manually run `/eval-skill`, `/improve-skill`, `/evolve`. The nightly agent **does all of that for you** while you sleep.
 
@@ -252,47 +246,69 @@ A scheduled agent (via `launchd` on macOS or `cron` on Linux) runs a heartbeat l
  │     Merge if passed, discard if failed       │
  │                                              │
  │  5. Report                                   │
- │     Generate morning report with:            │
- │     - What changed overnight                 │
- │     - New skills/instincts created           │
- │     - Experiments run and results            │
- │     - Suggested actions for you              │
+ │     Generate morning report                  │
  └──────────────────────────────────────────────┘
         │
         ▼
  You wake up to a smarter assistant + a report
 ```
 
-**Real example:** In our reference system, the nightly agent produced **134 commits across 11 nights** — evolving skills, running experiments, researching Claude Code updates, and archiving outdated patterns. All without any human input.
+**Here's what a real morning report looks like:**
+
+```markdown
+## Morning Report — 2026-03-22
+
+### What Changed Overnight
+- Improved skill: claude-code-reference v4.6 → v4.8
+  (added coverage for CC v2.1.77-80 features)
+- Archived 3 outdated instincts (covered by evolved skills)
+- New experiment passed: eval noise threshold set to 5pp
+
+### Goal Health
+- continuous_evolution:  ✅ healthy (7 skills, all 100% eval)
+- code_quality:          ✅ healthy (148/148 tests passing)
+- resource_awareness:    ⚠️ attention (context usage trending up)
+  → Queued experiment: split large skill into chapters
+
+### Research Findings
+- Claude Code v2.1.81: new --bare flag could speed up headless mode
+  → Experiment queued for tomorrow night
+- New pattern detected in community: writer/reviewer agent separation
+  → Instinct created, will converge if reinforced
+
+### Suggested Actions (for you)
+- Review 2 knowledge card candidates from overnight research
+- Approve experiment: context reduction via skill splitting
+```
+
+In our reference system, the nightly agent produced **134 commits across 11 nights** — evolving skills, running experiments, researching Claude Code updates, and archiving outdated patterns. All without any human input.
 
 The nightly agent is what turns Homunculus from "a tool you use" into "a system that grows on its own."
 
 See [docs/nightly-agent.md](docs/nightly-agent.md) for setup.
 
-### Meta-Evolution (Advanced)
-
-The evolution mechanism itself evolves:
-- Instinct survival rate too low? → Raise extraction thresholds
-- Eval discrimination too low? → Add harder scenarios
-- Tracked via: `instinct_survival_rate`, `skill_convergence`, `eval_discrimination`
-
 ---
 
 ## Real-World Results
 
-Built and tested on a real personal AI assistant. In **15 days**:
+Built and tested on a real personal AI assistant. In **15 days** (starting from zero):
 
 | What evolved | Count | Details |
 |-------------|-------|---------|
-| Instincts | **168** | 84 active + 84 auto-archived |
-| Skills | **7** | All 100% eval pass (93 scenarios) |
-| Subagents | **3** | Auto-extracted from patterns |
-| Slash commands | **15** | Workflow automations |
-| Scripts | **19** | Session lifecycle, health checks |
+| Instincts | **168** | 84 active + 84 auto-archived (system prunes itself) |
+| Skills | **7** | All 100% eval pass rate (93 test scenarios) |
+| Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
+| Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
+| Scripts | **19** | Session lifecycle, health checks, evolution reports |
 | Hooks | **11** | Observation, compaction, quality gates |
-| Commits | **1,235** | System iterates fast |
+| Rules | **6** | Core patterns, evolution system, knowledge management |
+| Scheduled agents | **4** | Nightly heartbeat, Discord bridge, daily news, trading |
+| ADRs | **8** | Architecture decision records |
+| Experiments | **13** | Structured A/B tests with pass/fail tracking |
+| Goal tree | **9 goals / 46+ sub-goals** | Each with health checks and metrics |
+| Total commits | **1,235** | System iterates fast |
 
-The nightly agent alone: **134 commits across 11 nights** — evolving the system while the developer slept.
+The nightly agent alone: **134 commits across 11 nights**.
 
 [See the full reference implementation →](examples/reference/)
 
@@ -305,10 +321,58 @@ The nightly agent alone: **134 commits across 11 nights** — evolving the syste
 | **Goal-driven** | Goal tree with metrics + health checks | No | No | No |
 | **Learns from usage** | Auto-observation → instincts → skills | Skill generation | Manual | Auto-memory |
 | **Quality control** | Eval specs + scenario tests | None | None | None |
+| **Autonomous overnight** | Nightly agent: eval + improve + research + experiment | No | No | No |
 | **Self-improving** | Eval → improve → replace loop | Partial | No | No |
-| **Autonomous** | Nightly agent + experiments | Partial | No | No |
 | **Meta-evolution** | Evolution mechanism evolves itself | No | No | No |
-| **Implementation agnostic** | Skills, agents, hooks, scripts, MCP... | Skills only | Rules only | Memory only |
+| **Implementation agnostic** | Skills, agents, hooks, scripts, MCP, cron... | Skills only | Rules only | Memory only |
+
+OpenClaw is great at generating skills on demand. Homunculus goes further: it decides *what* to improve based on goal health, *validates* improvements with evals, and does it all *autonomously* overnight. They solve different problems — OpenClaw is a power tool, Homunculus is an operating system for evolution.
+
+---
+
+## What Gets Generated
+
+After `npx homunculus init`:
+
+```
+your-project/
+├── architecture.yaml           # Your goal tree (the brain)
+├── homunculus/
+│   ├── instincts/
+│   │   ├── personal/           # Auto-extracted patterns
+│   │   └── archived/           # Auto-pruned old patterns
+│   ├── evolved/
+│   │   ├── skills/             # Converged, tested knowledge
+│   │   ├── agents/             # Specialized subagents
+│   │   └── evals/              # Skill evaluation specs
+│   └── experiments/            # A/B test tracking
+├── .claude/
+│   ├── rules/
+│   │   └── evolution-system.md # How Claude should evolve
+│   └── commands/
+│       ├── eval-skill.md       # /eval-skill
+│       ├── improve-skill.md    # /improve-skill
+│       └── evolve.md           # /evolve
+└── scripts/
+    ├── observe.sh              # Observation hook
+    ├── evaluate-session.js     # Pattern extraction
+    └── prune-instincts.js      # Automatic cleanup
+```
+
+---
+
+## Advanced: Meta-Evolution
+
+The evolution mechanism itself evolves:
+
+- **Instinct survival rate** too low? → Automatically raise extraction thresholds
+- **Eval discrimination** too low? → Add harder boundary scenarios
+- **Skill convergence** too slow? → Adjust aggregation triggers
+
+Tracked via three metrics:
+1. `instinct_survival_rate` — % of instincts that survive 14 days
+2. `skill_convergence` — time from first instinct to evolved skill
+3. `eval_discrimination` — % of eval scenarios that actually distinguish between versions
 
 ---
 
@@ -346,13 +410,19 @@ Yes. `npx homunculus init` adds to your project without overwriting existing fil
 Claude's memory records facts. Homunculus evolves *behavior* — tested skills, automated hooks, specialized agents — all driven by goals you define, with quality gates that prevent regression.
 </details>
 
+<details>
+<summary><strong>How does this compare to OpenClaw?</strong></summary>
+
+OpenClaw is excellent at generating skills on demand — it's a powerful tool. Homunculus solves a different problem: autonomous, goal-directed evolution. It decides what needs improving (via goal health), validates improvements (via evals), and does the work overnight (via the nightly agent). You could use both — OpenClaw for on-demand skill generation, Homunculus for the autonomous evolution layer on top.
+</details>
+
 ---
 
 ## Philosophy
 
 > "Your AI assistant should be a seed, not a statue."
 
-Stop spending your evenings tuning AI. Plant a seed, define your goals, and let it grow. The more you use it, the better it gets — and it tells you exactly how and why through eval scores, goal health checks, and evolution reports.
+Stop spending your evenings tuning AI. Plant a seed, define your goals, and let it grow. The more you use it, the better it gets — and it tells you exactly how and why through eval scores, goal health checks, and morning reports.
 
 ---
 
