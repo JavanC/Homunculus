@@ -9,7 +9,7 @@
 You spend hours tweaking prompts, writing rules, researching new features, configuring tools. Homunculus flips this: define your goals, and the system evolves itself — skills, agents, hooks, scripts, everything — while you focus on actual work.
 
 ```bash
-npx homunculus init
+npx homunculus-code init
 ```
 
 One command. Answer a few questions. Start using Claude Code. Your assistant begins evolving.
@@ -150,7 +150,7 @@ The evolution engine then:
 ### 1. Install
 
 ```bash
-npx homunculus init
+npx homunculus-code init
 ```
 
 The wizard asks you a few questions and sets everything up:
@@ -336,7 +336,7 @@ OpenClaw is great at generating skills on demand. Homunculus goes further: it de
 
 ## What Gets Generated
 
-After `npx homunculus init`:
+After `npx homunculus-code init`:
 
 ```
 your-project/
@@ -405,7 +405,7 @@ The observation hook is lightweight (no API calls). Instinct extraction uses a s
 <details>
 <summary><strong>Can I use my existing CLAUDE.md and rules?</strong></summary>
 
-Yes. `npx homunculus init` adds to your project without overwriting existing files. Your current setup becomes the starting point for evolution.
+Yes. `npx homunculus-code init` adds to your project without overwriting existing files. Your current setup becomes the starting point for evolution.
 </details>
 
 <details>

@@ -27,7 +27,7 @@ Found a bug? Open an issue with:
 1. Fork the repo
 2. Create a feature branch
 3. Make your changes
-4. Test with `npx homunculus init` in a fresh directory
+4. Test with `npx homunculus-code init` in a fresh directory
 5. Open a PR
 
 ## Development
