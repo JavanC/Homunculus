@@ -1,5 +1,6 @@
 # Homunculus for Claude Code
 
+[![npm version](https://img.shields.io/npm/v/homunculus-code)](https://www.npmjs.com/package/homunculus-code)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.70+-blue)](https://docs.anthropic.com/en/docs/claude-code)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org)
