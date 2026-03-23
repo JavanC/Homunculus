@@ -352,7 +352,6 @@ Built and tested on a real personal AI assistant. In **16 days** (starting from 
 | Instincts | **174** | 90 active + 84 auto-archived (system prunes itself) |
 | Skills | **10** | All 100% eval pass rate (117 test scenarios) |
 | Experiments | **14** | Structured A/B tests with pass/fail tracking |
-| Total commits | **1,270** | System iterates fast |
 | Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
 | Scheduled agents | **4** | Nightly heartbeat, Discord bridge, daily news, trading |
 | Hooks | **11** | Observation, compaction, quality gates |
@@ -360,6 +359,7 @@ Built and tested on a real personal AI assistant. In **16 days** (starting from 
 | Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
 | Rules | **6** | Core patterns, evolution system, knowledge management |
 | ADRs | **8** | Architecture decision records |
+| Total commits | **1,270** | Mostly automated by nightly agent |
 
 The nightly agent alone: **134 commits across 11 nights**.
 
