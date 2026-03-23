@@ -126,14 +126,14 @@ The `realized_by` field can point to **anything**:
            └──────────┼──────────┘
                       │
                       ▼
-               ┌───────────┐
+               ┌────────────┐
                │  Evolve    │   Goals stay the same.
-               │  ───────── │   Implementations get better.
+               │  ────────  │   Implementations get better.
                │  Extract   │
                │  Converge  │
                │  Eval      │
                │  Replace   │
-               └───────────┘
+               └────────────┘
 ```
 
 **Three inputs, one engine:**
