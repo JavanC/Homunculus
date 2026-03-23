@@ -116,25 +116,25 @@ The `realized_by` field can point to **anything**:
 ## How It Evolves
 
 ```
-       You use Claude Code normally
-                   |
-         +---------+---------+
-         |         |         |
-         v         v         v
-      Observe  Health Check  Research
-      (hooks)  (goal tree)   (nightly)
-         |         |         |
-         +---------+---------+
-                   |
-                   v
-            +-----------+
-            |  Evolve   |    Goals stay the same.
-            |  -------- |    Implementations get better.
-            |  Extract  |
-            |  Converge |
-            |  Eval     |
-            |  Replace  |
-            +-----------+
+      You use Claude Code normally
+                  │
+       ┌──────────┼──────────┐
+       │          │          │
+       ▼          ▼          ▼
+    Observe   Health Check   Research
+    (hooks)   (goal tree)    (nightly)
+       │          │          │
+       └──────────┼──────────┘
+                  │
+                  ▼
+           ┌───────────┐
+           │  Evolve    │    Goals stay the same.
+           │  ───────── │    Implementations get better.
+           │  Extract   │
+           │  Converge  │
+           │  Eval      │
+           │  Replace   │
+           └───────────┘
 ```
 
 **Three inputs, one engine:**
