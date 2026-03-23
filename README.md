@@ -348,18 +348,18 @@ Built and tested on a real personal AI assistant. In **16 days** (starting from 
 
 | What evolved | Count | Details |
 |-------------|-------|---------|
+| Goal tree | **9 goals / 46+ sub-goals** | Each with health checks and metrics |
 | Instincts | **174** | 90 active + 84 auto-archived (system prunes itself) |
 | Skills | **10** | All 100% eval pass rate (117 test scenarios) |
-| Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
-| Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
-| Scripts | **19** | Session lifecycle, health checks, evolution reports |
-| Hooks | **11** | Observation, compaction, quality gates |
-| Rules | **6** | Core patterns, evolution system, knowledge management |
-| Scheduled agents | **4** | Nightly heartbeat, Discord bridge, daily news, trading |
-| ADRs | **8** | Architecture decision records |
 | Experiments | **14** | Structured A/B tests with pass/fail tracking |
-| Goal tree | **9 goals / 46+ sub-goals** | Each with health checks and metrics |
 | Total commits | **1,270** | System iterates fast |
+| Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
+| Scheduled agents | **4** | Nightly heartbeat, Discord bridge, daily news, trading |
+| Hooks | **11** | Observation, compaction, quality gates |
+| Scripts | **19** | Session lifecycle, health checks, evolution reports |
+| Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
+| Rules | **6** | Core patterns, evolution system, knowledge management |
+| ADRs | **8** | Architecture decision records |
 
 The nightly agent alone: **134 commits across 11 nights**.
 
