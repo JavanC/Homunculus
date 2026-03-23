@@ -19,7 +19,7 @@ npx homunculus-code init
 
 One command. Define your goals. Your assistant starts evolving.
 
-> **Proof it works:** One developer ran this system for 15 days. It auto-generated 168 behavioral patterns, converged them into 7 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent alone made 134 commits across 11 nights — improving the system while the developer slept. [See results →](#real-world-results)
+> **Proof it works:** One developer ran this system for 16 days. It auto-generated 174 behavioral patterns, converged them into 10 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent alone made 134 commits across 11 nights — improving the system while the developer slept. [See results →](#real-world-results)
 
 ---
 
@@ -317,8 +317,8 @@ A scheduled agent (via `launchd` on macOS or `cron` on Linux) runs a heartbeat l
 - New experiment passed: eval noise threshold set to 5pp
 
 ### Goal Health
-- continuous_evolution:  ✅ healthy (7 skills, all 100% eval)
-- code_quality:          ✅ healthy (148/148 tests passing)
+- continuous_evolution:  ✅ healthy (10 skills, all 100% eval)
+- code_quality:          ✅ healthy (144/144 tests passing)
 - resource_awareness:    ⚠️ attention (context usage trending up)
   → Queued experiment: split large skill into chapters
 
@@ -343,12 +343,12 @@ See [docs/nightly-agent.md](docs/nightly-agent.md) for setup.
 
 ## Real-World Results
 
-Built and tested on a real personal AI assistant. In **15 days** (starting from zero):
+Built and tested on a real personal AI assistant. In **16 days** (starting from zero):
 
 | What evolved | Count | Details |
 |-------------|-------|---------|
-| Instincts | **168** | 84 active + 84 auto-archived (system prunes itself) |
-| Skills | **7** | All 100% eval pass rate (93 test scenarios) |
+| Instincts | **174** | 90 active + 84 auto-archived (system prunes itself) |
+| Skills | **10** | All 100% eval pass rate (117 test scenarios) |
 | Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
 | Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
 | Scripts | **19** | Session lifecycle, health checks, evolution reports |
@@ -356,9 +356,9 @@ Built and tested on a real personal AI assistant. In **15 days** (starting from 
 | Rules | **6** | Core patterns, evolution system, knowledge management |
 | Scheduled agents | **4** | Nightly heartbeat, Discord bridge, daily news, trading |
 | ADRs | **8** | Architecture decision records |
-| Experiments | **13** | Structured A/B tests with pass/fail tracking |
+| Experiments | **14** | Structured A/B tests with pass/fail tracking |
 | Goal tree | **9 goals / 46+ sub-goals** | Each with health checks and metrics |
-| Total commits | **1,235** | System iterates fast |
+| Total commits | **1,270** | System iterates fast |
 
 The nightly agent alone: **134 commits across 11 nights**.
 

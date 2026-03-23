@@ -181,8 +181,8 @@ I ran this on my personal AI assistant, starting from an empty repo. In 15 days,
 
 | Artifact | Count |
 |----------|-------|
-| Behavioral patterns (instincts) | 168 (84 active + 84 auto-archived) |
-| Tested skills | 7 (100% eval pass, 93 test scenarios) |
+| Behavioral patterns (instincts) | 174 (90 active + 84 auto-archived) |
+| Tested skills | 10 (100% eval pass, 117 test scenarios) |
 | Specialized agents | 3 |
 | Slash commands | 15 |
 | Automation scripts | 19 |

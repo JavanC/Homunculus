@@ -172,12 +172,12 @@ No manual configuration. No editing YAML files at midnight. No breaking things a
 
 ## Real Results
 
-I ran this system on my personal AI assistant for 15 days, starting from zero. Here's what the system generated on its own:
+I ran this system on my personal AI assistant for 16 days, starting from zero. Here's what the system generated on its own:
 
 | What evolved | Count |
 |-------------|-------|
-| Behavioral patterns (instincts) | 168 (84 active + 84 auto-archived) |
-| Tested skills | 7 (all 100% eval pass, 93 test scenarios) |
+| Behavioral patterns (instincts) | 174 (90 active + 84 auto-archived) |
+| Tested skills | 10 (all 100% eval pass, 117 test scenarios) |
 | Specialized agents | 3 |
 | Slash commands | 15 |
 | Automation scripts | 19 |
