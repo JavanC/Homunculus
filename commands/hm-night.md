@@ -126,6 +126,35 @@ Generate a summary report and save to `homunculus/reports/YYYY-MM-DD.md`:
 └──────────────────────────────────────────────┘
 ```
 
+## Permissions
+
+The nightly agent can act autonomously within safe boundaries. Anything outside those boundaries becomes a **suggested action** in the report for the user to decide.
+
+**Can do autonomously:**
+- Extract and archive instincts
+- Write new skills, eval specs, and run eval/improve
+- Prune low-scoring instincts (`prune-instincts.js --apply`)
+- Write simple scripts (non-destructive automation)
+- Update `architecture.yaml` realized_by fields
+- Generate reports
+
+**Must suggest, not execute:**
+- Add or modify hooks in `settings.json` (affects every session)
+- Modify `CLAUDE.md` or `.claude/rules/` (core behavioral rules)
+- Delete files or remove functionality
+- Install packages or external dependencies
+- Create scheduled jobs (launchd/cron)
+- Anything that changes permissions or security boundaries
+
+When the agent identifies an improvement it can't do autonomously, it writes a **suggested action** in the report:
+```
+Suggested actions:
+- ⚒️ Add pre-commit hook for lint (needs settings.json change — user approval)
+- ⚒️ Create launchd job for daily news script (needs scheduler setup)
+```
+
+The user reviews suggestions and decides which to adopt.
+
 ## Rules
 
 - **Don't default to skills for everything** — match implementation to the goal's nature

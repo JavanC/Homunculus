@@ -73,14 +73,34 @@ launchctl load ~/Library/LaunchAgents/com.homunculus.heartbeat.plist
 
 > macOS note: cron cannot access Keychain. If your Claude CLI uses OAuth, use launchd.
 
+## Permissions
+
+The nightly agent operates within safe boundaries. Changes that affect core behavior require your approval.
+
+**Autonomous** (agent does these directly):
+- Extract and archive instincts
+- Write/improve skills and eval specs
+- Prune low-scoring instincts
+- Write simple scripts
+- Update `architecture.yaml` realized_by
+- Generate reports
+
+**Suggested actions** (agent proposes, you decide):
+- Modify hooks, rules, or CLAUDE.md
+- Delete files or remove functionality
+- Create scheduled jobs
+- Install dependencies
+
+The morning report includes a **Suggested actions** section for anything the agent couldn't do autonomously. Review and adopt what makes sense.
+
 ## Morning Report
 
 After each run, the agent produces a structured report with:
 - Session summary (phases completed, cost, duration)
-- System evolution (instinct routing, skill evals, mechanism reviews)
+- System evolution (instinct routing, skill evals)
 - Research topics (with source URLs and goal relevance tags)
 - Experiments (hypothesis, result, merged or discarded)
-- Suggested actions (prioritized, with forge cost estimates)
+- Suggested actions (things that need your approval)
 
 Configure delivery via Discord webhook, file output, or desktop notification.
 
