@@ -105,19 +105,30 @@ Once confirmed, generate `architecture.yaml` with:
 
 Write the file using the Write tool.
 
-### Step 6: Confirm
+### Step 6: Confirm + offer nightly agent
+
+**CRITICAL: Do NOT end the conversation after writing architecture.yaml. You MUST ask about the nightly agent in the SAME message as the confirmation.**
+
+After writing architecture.yaml, send exactly ONE message that contains BOTH the confirmation AND the nightly agent question:
 
 ```
 ✅ architecture.yaml created with N goals!
+
+One more thing — want to set up the nightly agent?
+
+It runs /hm-night automatically while you sleep, evolving
+your system overnight (health checks, skill evolution,
+research, experiments).
+
+→ yes — I'll configure it now (launchd on macOS, cron on Linux)
+→ no  — I'll run /hm-night manually when I want
 ```
 
-### Step 7: Offer nightly agent setup (ONE question)
+**Do NOT say "Your system is ready to evolve" or "Run /hm-night to start" — those phrases end the conversation too early.**
 
-> "Want to set up the nightly agent? It runs `/hm-night` automatically while you sleep — evolving your system overnight."
->
-> "Options: **yes** (I'll configure it now) / **no** (I'll run /hm-night manually)"
+Wait for answer.
 
-If yes:
+### Step 7: Configure nightly agent (if yes)
 
 1. Create `scripts/heartbeat.sh`:
    ```bash
@@ -142,12 +153,14 @@ If yes:
 If no:
 ```
 No problem! Run /hm-night anytime to evolve manually.
+Goals can always be refined by running /hm-goal again.
 ```
 
 ## Rules
 
 - **ONE question per message in Create Mode. Never ask two questions at once.**
-- Keep the whole setup under 5 back-and-forth messages
+- **NEVER skip Step 6's nightly agent question. It is mandatory.**
+- Keep the whole setup under 6 back-and-forth messages
 - Generate PRACTICAL goals, not abstract ones
 - Don't overwhelm — 3-5 top-level goals is ideal
 - In Show Mode, show realized_by status (✓ = file exists, ○ = not yet)
