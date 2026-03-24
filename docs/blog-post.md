@@ -1,13 +1,6 @@
----
-title: Stop Tuning Your AI. Let It Tune Itself.
-published: false
-description: How a goal tree replaced hundreds of hours of manual AI configuration.
-tags: ai, claudecode, opensource, productivity
-cover_image: https://github.com/user-attachments/assets/b3ce6017-02de-44a4-a3c6-8d45765c1693
-canonical_url: https://github.com/JavanC/Homunculus
----
-
 # Stop Tuning Your AI. Let It Tune Itself.
+
+*How a goal tree replaced hundreds of hours of manual AI configuration.*
 
 You're a Claude Code power user. Or an OpenClaw user. You've built rules, hooks, agents, skills. Your setup is dialed in.
 
