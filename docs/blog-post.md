@@ -134,24 +134,26 @@ Set up Homunculus, use Claude Code normally, and three processes run in the back
 
 A hook watches your tool usage. Repeated behaviors, like running tests before commits or searching the same error patterns, become **instincts**: confidence-scored behavioral patterns. Confidence grows with reinforcement. It decays without use (90-day half-life). The system remembers useful habits and forgets stale ones.
 
-### 2. Evolution
+### 2. Implementation Routing
 
-Related instincts merge into **skills**, tested knowledge modules with version numbers and eval specs. The system picks the right implementation for each goal:
+Each instinct gets tagged with the best mechanism to implement it. Not everything should be a skill:
 
-- Daily AI news? **Script + cron job.** Not a skill.
-- Pre-merge bug catching? **Hook.** Not an agent.
-- Shell script debugging? **Specialized agent.** Not a script.
+- Deterministic, every time? → **Hook.** Zero AI judgment needed.
+- Tied to specific files? → **Rule.** Path-scoped guidance.
+- Reusable knowledge collection? → **Skill.** With eval spec and versioning.
+- Periodic automation? → **Script + scheduler.** No AI needed at runtime.
+- Needs isolated context? → **Agent.** Specialist role.
 
-Implementation matches the goal's nature. Skills aren't the answer to everything.
+The system routes each instinct automatically. When it's implemented — as a hook, rule, skill, or script — the instinct gets archived. The implementation is the source of truth now.
 
 ### 3. Nightly Autonomy
 
-This changes the equation. Every night, a scheduled agent:
+This changes the equation. Every night, a scheduled agent runs the full pipeline:
 
-1. Runs **health checks** on every goal
-2. **Evaluates** skills against scenario tests
-3. **Improves** anything failing
-4. **Researches** better approaches for unhealthy goals
+1. **Routes** instincts to the right mechanism (hook/rule/skill/script/agent)
+2. **Evaluates** all implementations — skills via eval specs, hooks via error rates, rules via freshness
+3. **Reviews** every goal — is the current mechanism still the best one?
+4. **Researches** better approaches (with cross-night dedup so it doesn't repeat topics)
 5. Runs **experiments** in isolated git worktrees
 6. Writes a **morning report**
 
@@ -175,9 +177,9 @@ No manual configuration. No midnight YAML editing. No fixing things you accident
 
 ---
 
-## 15 Days of Evidence
+## 3 Weeks of Evidence
 
-I ran this on my personal AI assistant, starting from an empty repo. In 15 days, the system generated:
+I ran this on my personal AI assistant, starting from an empty repo. In 3 weeks, the system generated:
 
 | Artifact | Count |
 |----------|-------|
@@ -190,7 +192,7 @@ I ran this on my personal AI assistant, starting from an empty repo. In 15 days,
 | Scheduled agents | 4 |
 | Architecture decisions | 8 |
 
-The nightly agent made **134 commits across 11 nights**. It evolved skills, ran experiments, tracked Claude Code updates, and archived outdated patterns. I slept through all of it.
+The nightly agent made **134 autonomous commits**. It routed instincts to the right mechanisms, evolved skills, ran experiments, tracked Claude Code updates, and archived outdated patterns. I slept through all of it.
 
 The system also evolved its own task management:
 
@@ -203,7 +205,7 @@ The system also evolved its own task management:
   <em>Jarvis Dashboard (system overview) and Quest Board (gamified task management).</em>
 </p>
 
-And it has **meta-evolution**: the system measures whether its own evolution mechanism works (instinct survival rate, eval discrimination, skill convergence speed) and adjusts its parameters. The evolution process tunes itself.
+And it has **meta-evolution**: the system measures whether its own evolution mechanism works — instinct survival rate, eval discrimination, skill convergence speed, mechanism coverage, dispatch compliance — and adjusts its parameters. The evolution process tunes itself.
 
 ---
 
