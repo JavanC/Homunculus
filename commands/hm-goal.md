@@ -105,62 +105,19 @@ Once confirmed, generate `architecture.yaml` with:
 
 Write the file using the Write tool.
 
-### Step 6: Confirm + offer nightly agent
-
-**CRITICAL: Do NOT end the conversation after writing architecture.yaml. You MUST ask about the nightly agent in the SAME message as the confirmation.**
-
-After writing architecture.yaml, send exactly ONE message that contains BOTH the confirmation AND the nightly agent question:
+### Step 6: Confirm
 
 ```
 ✅ architecture.yaml created with N goals!
 
-One more thing — want to set up the nightly agent?
-
-It runs /hm-night automatically while you sleep, evolving
-your system overnight (health checks, skill evolution,
-research, experiments).
-
-→ yes — I'll configure it now (launchd on macOS, cron on Linux)
-→ no  — I'll run /hm-night manually when I want
-```
-
-**Do NOT say "Your system is ready to evolve" or "Run /hm-night to start" — those phrases end the conversation too early.**
-
-Wait for answer.
-
-### Step 7: Configure nightly agent (if yes)
-
-1. Create `scripts/heartbeat.sh`:
-   ```bash
-   #!/usr/bin/env bash
-   set -euo pipefail
-   cd "$(dirname "$0")/.."
-   unset CLAUDECODE
-   claude -p "/hm-night" --model claude-sonnet-4-6 --max-budget-usd 5.00
-   ```
-2. `chmod +x scripts/heartbeat.sh`
-3. Detect OS and configure scheduler:
-   - **macOS** → create launchd plist at `~/Library/LaunchAgents/com.homunculus.heartbeat.plist` (runs at 2am, with PATH including `~/.local/bin:/opt/homebrew/bin`), then `launchctl load` it
-   - **Linux** → add cron entry `0 2 * * * cd /path/to/project && bash scripts/heartbeat.sh`
-4. Report:
-   ```
-   ✅ Nightly agent configured! It will run at 2:00 AM daily.
-
-   Your system is ready. Use /hm-night to run a cycle now,
-   or let the nightly agent handle it while you sleep.
-   ```
-
-If no:
-```
-No problem! Run /hm-night anytime to evolve manually.
+Run /hm-night to start your first evolution cycle.
 Goals can always be refined by running /hm-goal again.
 ```
 
 ## Rules
 
 - **ONE question per message in Create Mode. Never ask two questions at once.**
-- **NEVER skip Step 6's nightly agent question. It is mandatory.**
-- Keep the whole setup under 6 back-and-forth messages
+- Keep the whole setup under 5 back-and-forth messages
 - Generate PRACTICAL goals, not abstract ones
 - Don't overwhelm — 3-5 top-level goals is ideal
 - In Show Mode, show realized_by status (✓ = file exists, ○ = not yet)

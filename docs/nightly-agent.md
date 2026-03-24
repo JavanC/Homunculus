@@ -4,9 +4,9 @@ The nightly agent runs `/hm-night` autonomously while you sleep — routing inst
 
 ## Quick Setup
 
-The easiest way: run `/hm-goal` in Claude Code. After defining your goals, it asks if you want to enable the nightly agent. Say yes, and it configures the scheduler for you.
+The easiest way: run `/hm-night` in Claude Code. The first time it runs, it asks if you want to enable automatic nightly runs. Say yes, and it configures the scheduler for you.
 
-You can also run `/hm-night` manually anytime.
+If `/hm-night` detects an existing scheduler setup, it skips the question.
 
 ## What It Does
 
@@ -23,7 +23,7 @@ Each night, the agent runs a phase pipeline:
 
 ## Manual Setup
 
-If `/hm-goal` didn't set it up, or you prefer manual configuration:
+If you prefer manual configuration instead of the auto-setup:
 
 ### macOS (launchd)
 

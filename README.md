@@ -231,7 +231,7 @@ The observation hook watches your usage automatically. As patterns emerge, insti
 
 `/hm-night` performs the complete evolution pipeline: routes instincts to the best mechanism (hook/rule/skill/script/agent), runs eval + improve on skills, reviews goal health, and generates a report. You can run it manually anytime, but the real power is letting it run autonomously every night.
 
-> `/hm-goal` will ask at the end if you want to set up the nightly agent — recommended for hands-free evolution.
+> The first time you run `/hm-night`, it will ask if you want to set up the nightly agent for automatic overnight evolution.
 
 ---
 
@@ -288,7 +288,7 @@ The system reviews these nightly — if a skill should be a hook, it suggests th
 
 This is what makes the system truly autonomous. The nightly agent runs `/hm-night` automatically while you sleep — routing instincts to the right mechanism, evaluating skills, reviewing goal health, and researching better approaches.
 
-**Setup:** Run `/hm-goal` to define your goals. At the end, it asks if you want to enable the nightly agent. Say yes, and it configures a scheduler (`launchd` on macOS, `cron` on Linux) to run every night.
+**Setup:** The first time you run `/hm-night`, it asks if you want to enable automatic nightly runs. Say yes, and it configures a scheduler (`launchd` on macOS, `cron` on Linux) to run every night.
 
 You can also run `/hm-night` manually anytime to trigger a cycle on demand.
 

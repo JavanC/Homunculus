@@ -155,6 +155,39 @@ Suggested actions:
 
 The user reviews suggestions and decides which to adopt.
 
+### Phase 6: Offer nightly agent setup (first run only)
+
+**After Phase 5, check if a nightly agent is already configured:**
+- Check if `scripts/heartbeat.sh` exists
+- Check if `~/Library/LaunchAgents/com.homunculus.heartbeat.plist` exists (macOS)
+- Check crontab for "homunculus" or "heartbeat" entries (Linux)
+
+**If NONE of these exist**, ask the user:
+
+> "Want to run this automatically every night? I can set up a nightly agent that runs `/hm-night` while you sleep."
+>
+> "**yes** / **no**"
+
+If yes:
+
+1. Create `scripts/heartbeat.sh`:
+   ```bash
+   #!/usr/bin/env bash
+   set -euo pipefail
+   cd "$(dirname "$0")/.."
+   unset CLAUDECODE
+   claude -p "/hm-night" --model claude-sonnet-4-6 --max-budget-usd 5.00
+   ```
+2. `chmod +x scripts/heartbeat.sh`
+3. Detect OS and configure scheduler:
+   - **macOS** → create launchd plist at `~/Library/LaunchAgents/com.homunculus.heartbeat.plist` (runs at 2am, with PATH including `~/.local/bin:/opt/homebrew/bin`), then `launchctl load` it
+   - **Linux** → add cron entry `0 2 * * * cd /path/to/project && bash scripts/heartbeat.sh`
+4. Report: `✅ Nightly agent configured! It will run at 2:00 AM daily.`
+
+If no: `No problem! Run /hm-night anytime.`
+
+**If nightly agent already exists**, skip this phase silently.
+
 ## Rules
 
 - **Don't default to skills for everything** — match implementation to the goal's nature
