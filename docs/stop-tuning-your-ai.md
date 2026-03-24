@@ -33,21 +33,19 @@ A better approach: start with a single agent. Let the system observe where it st
 
 ## The Building Blocks Exist. The Spine Doesn't.
 
-The community is moving toward AI autonomy. And the progress is remarkable. Look at what appeared in just the past few months:
+The community is moving toward AI autonomy. Look at what appeared in the past few months:
 
 - [OpenClaw](https://github.com/openclaw/openclaw) showed that AI can **extend its own capabilities** without human prompting. 300K+ stars in weeks. An AI that writes its own tools.
 - [everything-claude-code](https://github.com/affaan-m/everything-claude-code) built a system that **extracts behavioral patterns** from your usage and persists them across sessions. Your AI remembers how you work. Anthropic Hackathon winner.
 - [Karpathy's autoresearch](https://x.com/karpathy) proved AI can **run 118 experiment iterations** over 12 hours, improving results with zero human input. Autonomous scientific research.
 
-These projects are all brilliant. And they're all pointing in the same direction: **AI should improve itself, not wait for humans to improve it.**
+All three point in the same direction: **AI should improve itself, not wait for humans to improve it.**
 
-But they're disconnected pieces. OpenClaw extends capabilities and can't tell whether the extensions made things better. Pattern extraction captures behaviors and can't rank which ones matter. Autoresearch runs experiments and has no system telling it which experiments to run next.
+But they're disconnected. OpenClaw extends capabilities without knowing whether the extensions helped. Pattern extraction captures behaviors without ranking which ones matter. Autoresearch runs experiments without a system telling it what to try next.
 
-Each one is a powerful limb. None of them have a spine.
+The missing piece: a structure that connects these capabilities and gives them direction. Something that answers "improve toward what?" and "is it working?"
 
-The missing piece is a structure that connects these capabilities, gives them direction, and answers: where are we heading? Which parts work? Which parts need attention?
-
-That structure is a goal tree.
+A goal tree.
 
 ---
 
@@ -115,7 +113,7 @@ Goal: "Catch bugs before merge"
   Day 30:  agents/code-reviewer.md — AI-powered review
 ```
 
-The system restructures, replaces, and upgrades implementations whenever it finds something better. A skill from last week becomes a hook this week and an agent next week. The goal tree doesn't track how things get done. It tracks whether they're done.
+A skill from last week becomes a hook this week. A script becomes an agent next month. The goal tree tracks whether things get done, not how.
 
 ---
 
@@ -198,7 +196,7 @@ The system also evolved its own task management:
   <em>Jarvis Dashboard (system overview) and Quest Board (gamified task management).</em>
 </p>
 
-And it has **meta-evolution**: the system measures whether its own evolution mechanism works — instinct survival rate, eval discrimination, skill convergence speed, mechanism coverage, dispatch compliance — and adjusts its parameters. The evolution process tunes itself.
+The system also measures its own evolution mechanism: instinct survival rate, eval discrimination, skill convergence speed, mechanism coverage, dispatch compliance. When a metric drops, it adjusts extraction thresholds or adds harder test scenarios.
 
 ---
 
@@ -210,9 +208,7 @@ Most AI tools hand you more controls. Homunculus gives you three:
 2. **Set your boundaries.** Permissions for autonomous action.
 3. **Walk away.** The system handles the rest.
 
-You don't need expertise in prompt engineering, hook configuration, agent orchestration, or skill design. You need clarity on **what you want**.
-
-AI is smart enough to figure out the rest. Set goals, grant permissions, sleep.
+You don't need expertise in prompt engineering, hook configuration, agent orchestration, or skill design. You need clarity on what you want. The system handles the rest.
 
 ---
 
@@ -250,6 +246,6 @@ Homunculus builds on ideas from:
 
 ---
 
-I'd like to hear how you configure your AI assistant today. Are you on the treadmill? Have you tried autonomous approaches? Drop a comment.
+How do you configure your AI assistant today? Still on the treadmill?
 
 *Built by [Javan](https://github.com/JavanC) and his self-evolving AI assistant.*
