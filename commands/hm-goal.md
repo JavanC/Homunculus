@@ -125,7 +125,7 @@ If yes:
    set -euo pipefail
    cd "$(dirname "$0")/.."
    unset CLAUDECODE
-   claude -p "/hm-night" --model claude-sonnet-4-6 --max-budget-usd 1.00
+   claude -p "/hm-night" --model claude-sonnet-4-6 --max-budget-usd 5.00
    ```
 2. `chmod +x scripts/heartbeat.sh`
 3. Detect OS and configure scheduler:
