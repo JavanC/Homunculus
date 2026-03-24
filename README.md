@@ -296,24 +296,24 @@ You can also run `/hm-night` manually anytime to trigger a cycle on demand.
  You go to sleep
         │
         ▼
- ┌────────────────────────────────────────────┐
- │  Nightly Agent (phase pipeline)            │
- │                                            │
- │  P0: Assigned tasks                        │
- │                                            │
- │  P1: Evolution cycle                       │
- │    Route instincts → 8 mechanisms          │
- │    Eval + improve all implementations      │
- │    Review: best mechanism per goal?         │
- │                                            │
- │  P2: Research (cross-night dedup)          │
- │                                            │
- │  P3: Experiments (hypothesis → verify)     │
- │                                            │
- │  P4: Sync (CLAUDE.md / architecture.yaml)  │
- │                                            │
- │  Bonus: Extra rounds if budget allows      │
- └────────────────────────────────────────────┘
+ ┌─────────────────────────────────────────────┐
+ │  Nightly Agent (phase pipeline)             │
+ │                                             │
+ │  P0: Assigned tasks                         │
+ │                                             │
+ │  P1: Evolution cycle                        │
+ │    Route instincts → 8 mechanisms           │
+ │    Eval + improve all implementations       │
+ │    Review: best mechanism per goal?          │
+ │                                             │
+ │  P2: Research (cross-night dedup)           │
+ │                                             │
+ │  P3: Experiments (hypothesis → verify)      │
+ │                                             │
+ │  P4: Sync (CLAUDE.md / architecture.yaml)   │
+ │                                             │
+ │  Bonus: Extra rounds if budget allows       │
+ └─────────────────────────────────────────────┘
         │
         ▼
  You wake up to a smarter assistant + a report
