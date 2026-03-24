@@ -19,7 +19,7 @@ npx homunculus-code init
 
 One command. Define your goals. Your assistant starts evolving.
 
-> **Proof it works:** One developer ran this system for 16 days. It auto-generated 174 behavioral patterns, converged them into 10 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent alone made 134 commits across 11 nights — improving the system while the developer slept. [See results →](#real-world-results)
+> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 174 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent alone made 134 commits across 11 nights — improving the system while the developer slept. [See results →](#real-world-results)
 
 ---
 
@@ -155,6 +155,8 @@ The evolution engine then:
 
 ### 1. Install
 
+Run in your project directory (where your `CLAUDE.md` or `.claude/` lives):
+
 ```bash
 npx homunculus-code init
 ```
@@ -222,15 +224,14 @@ Watch Claude check your goals, scan for patterns, evaluate skills, and generate 
 The observation hook watches your usage automatically. As patterns emerge, instincts are extracted and routed to the right mechanism:
 
 ```
-/hm-night       Run an evolution cycle (routes instincts, evals skills, reviews goals)
+/hm-goal        Define or refine your goals
+/hm-night       Run a full evolution cycle (can run manually, but best set up as nightly agent)
 /hm-status      Check evolution progress
-/hm-goal        Refine your goals anytime
-/eval-skill     Evaluate a specific skill
-/improve-skill  Auto-improve a skill
-/evolve         Converge instincts into skills
 ```
 
-Set up the [nightly agent](docs/nightly-agent.md) to run `/hm-night` autonomously while you sleep.
+`/hm-night` performs the complete evolution pipeline: routes instincts to the best mechanism (hook/rule/skill/script/agent), runs eval + improve on skills, reviews goal health, and generates a report. You can run it manually anytime, but the real power is letting it run autonomously every night.
+
+> `/hm-goal` will ask at the end if you want to set up the nightly agent — recommended for hands-free evolution.
 
 ---
 
@@ -285,9 +286,11 @@ The system reviews these nightly — if a skill should be a hook, it suggests th
 
 ## Nightly Agent
 
-This is what makes the system truly autonomous. Without it, you'd still need to manually run `/eval-skill`, `/improve-skill`, `/evolve`. The nightly agent **does all of that for you** while you sleep.
+This is what makes the system truly autonomous. The nightly agent runs `/hm-night` automatically while you sleep — routing instincts to the right mechanism, evaluating skills, reviewing goal health, and researching better approaches.
 
-A scheduled agent (via `launchd` on macOS or `cron` on Linux) runs a heartbeat loop every night:
+**Setup:** Run `/hm-goal` to define your goals. At the end, it asks if you want to enable the nightly agent. Say yes, and it configures a scheduler (`launchd` on macOS, `cron` on Linux) to run every night.
+
+You can also run `/hm-night` manually anytime to trigger a cycle on demand.
 
 ```
  You go to sleep
@@ -299,11 +302,13 @@ A scheduled agent (via `launchd` on macOS or `cron` on Linux) runs a heartbeat l
  │  P0: Assigned tasks                          │
  │                                              │
  │  P1: Evolution cycle                         │
- │     Route instincts → best mechanism         │
+ │     Route instincts → hook/rule/skill/       │
+ │       script/agent (8 mechanisms)            │
  │     Eval + improve skills                    │
  │     Review workflow/subagent health           │
  │     Check all mechanisms are working          │
- │     Review goal implementations               │
+ │     Review: is each goal using the best      │
+ │       mechanism? Suggest upgrades.            │
  │                                              │
  │  P2: Research (with cross-night dedup)       │
  │                                              │
@@ -356,7 +361,7 @@ See [docs/nightly-agent.md](docs/nightly-agent.md) for setup.
 
 ## Real-World Results
 
-Built and tested on a real personal AI assistant. In **16 days** (starting from zero):
+Built and tested on a real personal AI assistant. In **3 weeks** (starting from zero):
 
 | What evolved | Count | Details |
 |-------------|-------|---------|
