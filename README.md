@@ -19,7 +19,7 @@ npx homunculus-code init
 
 One command. Define your goals. Your assistant starts evolving.
 
-> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 174 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent alone made 134 commits across 11 nights — improving the system while the developer slept. [See results →](#real-world-results)
+> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 174 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent made 134 autonomous commits — improving the system while the developer slept. [See results →](#real-world-results)
 
 ---
 
@@ -217,7 +217,7 @@ Claude: ✅ architecture.yaml created with 3 goals!
 > /hm-night
 ```
 
-Watch Claude check your goals, scan for patterns, evaluate skills, and generate a report — all in one command. This is what the nightly agent does autonomously while you sleep.
+Watch Claude check your goals, route instincts to the right mechanisms (hook/rule/skill/script/agent), evaluate and improve implementations, and generate a report — all in one command. This is what the nightly agent does autonomously while you sleep.
 
 ### 4. Keep Using Claude Code
 
@@ -296,28 +296,24 @@ You can also run `/hm-night` manually anytime to trigger a cycle on demand.
  You go to sleep
         │
         ▼
- ┌──────────────────────────────────────────────┐
- │  Nightly Agent (phase pipeline)              │
- │                                              │
- │  P0: Assigned tasks                          │
- │                                              │
- │  P1: Evolution cycle                         │
- │     Route instincts → hook/rule/skill/       │
- │       script/agent (8 mechanisms)            │
- │     Eval + improve skills                    │
- │     Review workflow/subagent health           │
- │     Check all mechanisms are working          │
- │     Review: is each goal using the best      │
- │       mechanism? Suggest upgrades.            │
- │                                              │
- │  P2: Research (with cross-night dedup)       │
- │                                              │
- │  P3: Experiments (hypothesis → verify)       │
- │                                              │
- │  P4: Sync (CLAUDE.md / architecture.yaml)    │
- │                                              │
- │  Bonus: Extra rounds if budget allows        │
- └──────────────────────────────────────────────┘
+ ┌────────────────────────────────────────────┐
+ │  Nightly Agent (phase pipeline)            │
+ │                                            │
+ │  P0: Assigned tasks                        │
+ │                                            │
+ │  P1: Evolution cycle                       │
+ │    Route instincts → 8 mechanisms          │
+ │    Eval + improve all implementations      │
+ │    Review: best mechanism per goal?         │
+ │                                            │
+ │  P2: Research (cross-night dedup)          │
+ │                                            │
+ │  P3: Experiments (hypothesis → verify)     │
+ │                                            │
+ │  P4: Sync (CLAUDE.md / architecture.yaml)  │
+ │                                            │
+ │  Bonus: Extra rounds if budget allows      │
+ └────────────────────────────────────────────┘
         │
         ▼
  You wake up to a smarter assistant + a report
@@ -351,7 +347,7 @@ You can also run `/hm-night` manually anytime to trigger a cycle on demand.
 - Approve experiment: context reduction via skill splitting
 ```
 
-In our reference system, the nightly agent produced **134 commits across 11 nights** — evolving skills, running experiments, researching Claude Code updates, and archiving outdated patterns. All without any human input.
+In our reference system, the nightly agent produced **134 autonomous commits** — routing instincts to the right mechanisms, evolving skills, running experiments, researching better approaches, and archiving outdated patterns. All without any human input.
 
 The nightly agent is what turns Homunculus from "a tool you use" into "a system that grows on its own."
 
@@ -365,7 +361,7 @@ Built and tested on a real personal AI assistant. In **3 weeks** (starting from 
 
 | What evolved | Count | Details |
 |-------------|-------|---------|
-| Goal tree | **9 goals / 46+ sub-goals** | Each with health checks and metrics |
+| Goal tree | **10 goals / 46+ sub-goals** | Each with health checks and metrics |
 | Instincts | **174** | 90 active + 84 auto-archived (system prunes itself) |
 | Skills | **10** | All 100% eval pass rate (117 test scenarios) |
 | Experiments | **14** | Structured A/B tests with pass/fail tracking |
@@ -378,7 +374,7 @@ Built and tested on a real personal AI assistant. In **3 weeks** (starting from 
 | ADRs | **8** | Architecture decision records |
 | Total commits | **1,270** | Mostly automated by nightly agent |
 
-The nightly agent alone: **134 commits across 11 nights**.
+The nightly agent alone: **134 autonomous commits**.
 
 The system even evolved its own task management board:
 
