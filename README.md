@@ -109,7 +109,7 @@ The `realized_by` field can point to **anything**:
 | Rule | `rules/security.md` | Claude Code behavioral rule |
 | Command | `commands/quality-gate.md` | Slash command workflow |
 
-**Goals are stable. Implementations evolve.** The same goal can go from a mental note → instinct → skill → hook → agent. The system replaces and upgrades implementations while keeping goals intact.
+**Goals are stable. Implementations evolve.** The system automatically routes each behavior to its optimal mechanism — hook, rule, skill, script, agent, or system. Implementations get replaced and upgraded while goals stay intact.
 
 ---
 
@@ -143,11 +143,11 @@ The `realized_by` field can point to **anything**:
 3. **Research** — a nightly agent scans for better approaches and proposes experiments
 
 The evolution engine then:
-- Extracts behavioral patterns → **instincts** (confidence-scored, auto-decay)
-- Converges related instincts → **skills** (tested with eval specs)
-- Evaluates and improves skills → **eval → improve loop** until 100% pass
-- Proposes replacements → instinct becomes hook, script becomes agent
-- Prunes outdated implementations → automatic archival
+- Extracts behavioral patterns → **instincts** (tagged with best mechanism + goal path)
+- Routes each instinct to its optimal mechanism → **hook, rule, skill, script, agent, or system**
+- For skills: **eval → improve loop** until 100% pass rate
+- Reviews all goals nightly → is the current mechanism still the best one?
+- Archives instincts once implemented → the mechanism is the source of truth now
 
 ---
 
@@ -219,12 +219,12 @@ Watch Claude check your goals, scan for patterns, evaluate skills, and generate 
 
 ### 4. Keep Using Claude Code
 
-The observation hook watches your usage automatically. As patterns emerge:
+The observation hook watches your usage automatically. As patterns emerge, instincts are extracted and routed to the right mechanism:
 
 ```
-/hm-night       Run an evolution cycle
+/hm-night       Run an evolution cycle (routes instincts, evals skills, reviews goals)
 /hm-status      Check evolution progress
-/hm-goal       Refine your goals anytime
+/hm-goal        Refine your goals anytime
 /eval-skill     Evaluate a specific skill
 /improve-skill  Auto-improve a skill
 /evolve         Converge instincts into skills
@@ -242,15 +242,29 @@ The central nervous system. Every goal has a purpose, metrics, and health checks
 
 ### Instincts
 
-Small behavioral patterns auto-extracted from your usage. They have confidence scores that grow with reinforcement and decay over time (half-life: 90 days). Think of them as the system's "muscle memory."
+Small behavioral patterns auto-extracted from your usage. Each instinct is tagged with:
+- **Confidence score** — grows with reinforcement, decays over time (half-life: 90 days)
+- **Suggested mechanism** — which implementation type fits best (hook/rule/skill/script/...)
+- **Goal path** — which goal in the tree this serves
 
-### Skills
+Think of instincts as raw material. They get routed to the right mechanism and archived once implemented.
 
-When multiple instincts cover the same area, they converge into a skill — a tested, versioned knowledge module. Every skill has an eval spec with scenario tests. Skills that fail eval get automatically improved.
+### Implementation Routing
 
-### Eval Specs
+The system chooses the best mechanism for each behavior:
 
-Scenario-based tests for skills. Each scenario defines context, expected behavior, and anti-patterns. The system runs evals and auto-improves until 100% pass rate.
+| Behavior type | Mechanism |
+|--------------|-----------|
+| Deterministic, every time | **Hook** (zero AI judgment) |
+| Tied to specific files/dirs | **Rule** (path-scoped) |
+| Reusable knowledge collection | **Skill** (with eval spec) |
+| Periodic automation | **Script + scheduler** |
+| External service connection | **MCP** |
+| Needs isolated context | **Agent** |
+
+### Skills & Eval Specs
+
+When multiple instincts cover the same area and routing says "skill," they converge into a tested, versioned knowledge module. Every skill has an eval spec with scenario tests. Skills that fail eval get automatically improved.
 
 ### Replaceable Implementations
 
@@ -260,10 +274,12 @@ The core principle: **same goal, evolving implementation.**
 Goal: "Catch bugs before merge"
 
   v1: instinct → "remember to run tests"
-  v2: skill    → tdd-workflow.md (with eval spec)
-  v3: hook     → pre-commit.sh (automated)
-  v4: agent    → code-reviewer.md (AI-powered)
+  v2: rule     → .claude/rules/testing.md (path-scoped guidance)
+  v3: skill    → tdd-workflow.md (with eval spec)
+  v4: hook     → pre-commit.sh (deterministic, automated)
 ```
+
+The system reviews these nightly — if a skill should be a hook, it suggests the upgrade.
 
 ---
 
@@ -278,28 +294,24 @@ A scheduled agent (via `launchd` on macOS or `cron` on Linux) runs a heartbeat l
         │
         ▼
  ┌──────────────────────────────────────────────┐
- │  Nightly Agent (heartbeat loop)              │
+ │  Nightly Agent (phase pipeline)              │
  │                                              │
- │  1. Health Check                             │
- │     Scan goal tree → which goals are red?    │
+ │  P0: Assigned tasks                          │
  │                                              │
- │  2. Evolve                                   │
- │     Run /eval-skill on all skills            │
- │     Run /improve-skill on failing ones       │
- │     Converge new instincts → skills          │
- │     Prune outdated instincts                 │
+ │  P1: Evolution cycle                         │
+ │     Route instincts → best mechanism         │
+ │     Eval + improve skills                    │
+ │     Review workflow/subagent health           │
+ │     Check all mechanisms are working          │
+ │     Review goal implementations               │
  │                                              │
- │  3. Research                                 │
- │     Scan tech news, changelogs, community    │
- │     "Is there a better way to achieve X?"    │
+ │  P2: Research (with cross-night dedup)       │
  │                                              │
- │  4. Experiment                               │
- │     Generate hypotheses from weak goals      │
- │     Run experiments in isolated worktrees    │
- │     Merge if passed, discard if failed       │
+ │  P3: Experiments (hypothesis → verify)       │
  │                                              │
- │  5. Report                                   │
- │     Generate morning report                  │
+ │  P4: Sync (CLAUDE.md / architecture.yaml)    │
+ │                                              │
+ │  Bonus: Extra rounds if budget allows        │
  └──────────────────────────────────────────────┘
         │
         ▼
@@ -385,7 +397,7 @@ The system even evolved its own task management board:
 | | Homunculus | OpenClaw | Cursor Rules | Claude Memory |
 |---|---|---|---|---|
 | **Goal-driven** | Goal tree with metrics + health checks | No | No | No |
-| **Learns from usage** | Auto-observation → instincts → skills | Self-extending | Manual | Auto-memory |
+| **Learns from usage** | Auto-observation → instincts → 8 mechanisms | Self-extending | Manual | Auto-memory |
 | **Quality control** | Eval specs + scenario tests | None | None | None |
 | **Autonomous overnight** | Nightly agent: eval + improve + research + experiment | No | No | No |
 | **Self-improving** | Eval → improve → replace loop | Partial | No | No |
@@ -437,11 +449,15 @@ The evolution mechanism itself evolves:
 - **Instinct survival rate** too low? → Automatically raise extraction thresholds
 - **Eval discrimination** too low? → Add harder boundary scenarios
 - **Skill convergence** too slow? → Adjust aggregation triggers
+- **Mechanism coverage** low? → Flag goals that only rely on prompts for upgrade
+- **Dispatch compliance** off? → Review if agent dispatches follow the token decision tree
 
-Tracked via three metrics:
+Tracked via five metrics:
 1. `instinct_survival_rate` — % of instincts that survive 14 days
 2. `skill_convergence` — time from first instinct to evolved skill
 3. `eval_discrimination` — % of eval scenarios that actually distinguish between versions
+4. `mechanism_coverage` — % of goals with non-prompt implementations
+5. `compliance_rate` — % of agent dispatches at appropriate context pressure
 
 ---
 
