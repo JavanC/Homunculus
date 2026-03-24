@@ -147,6 +147,9 @@ function main() {
     for (const c of candidates) {
       const src = path.join(PERSONAL_DIR, `${c.name}.md`);
       const dest = path.join(ARCHIVED_DIR, `${c.name}.md`);
+      // Append archive metadata before moving
+      const note = `\n\n---\n_Archived: ${new Date().toISOString().slice(0, 10)} | Covered-by: ${c.reason || 'low-score'} | Score: ${c.score}_\n`;
+      fs.appendFileSync(src, note);
       fs.renameSync(src, dest);
       console.log(`  Archived: ${c.name}`);
     }

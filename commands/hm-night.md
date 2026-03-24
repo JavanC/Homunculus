@@ -38,30 +38,41 @@ Run through all 5 phases systematically.
          ai_news:         ○ not implemented yet
    ```
 
-### Phase 2: Scan Evolved Assets
+### Phase 2: Instinct Routing + Skill Evolution
 
-Check ALL evolved artifacts, not just skills:
+**2a. Route instincts to the right mechanism:**
 
-1. **Instincts**: Count in `homunculus/instincts/personal/` and `archived/`
-2. **Skills**: Count in `homunculus/evolved/skills/`, run evals if specs exist
-3. **Agents**: Count in `homunculus/evolved/agents/`
-4. **Scripts**: Check `scripts/` for automation
-5. **Hooks**: Check `.claude/settings.json` for configured hooks
-6. **Commands**: Check `.claude/commands/` for slash commands
-7. **Rules**: Check `.claude/rules/` for behavioral rules
+Read each instinct in `homunculus/instincts/personal/`. Check `suggested_mechanism` and `goal_path` in the frontmatter:
+
+- `hook` → Implement as a hook (add to `.claude/settings.json`) → Archive instinct
+- `rule` → Write a `.claude/rules/*.md` file → Archive instinct
+- `skill` → Collect for skill aggregation (step 2b)
+- `script` → Write script to `scripts/` → Archive instinct
+- `agent` → Write agent to `homunculus/evolved/agents/` → Archive instinct
+- No tag → Use the Implementation Routing table above to decide
+
+**Archive** means move from `instincts/personal/` to `instincts/archived/` with a note:
+```
+---
+_Archived: 2026-03-25 | Covered-by: hook:pre-commit.sh | Reason: implemented_
+```
+
+Not every instinct needs to be routed in one night. Focus on clear cases. Ambiguous ones can wait.
+
+**2b. Skill aggregation + eval:**
+
+- 5+ instincts with `suggested_mechanism: skill` covering the same area → aggregate into a skill
+- Run `/eval-skill` on skills that have eval specs
+- Run `/improve-skill` on any failing ones
 
 Report:
 ```
-[2/5] Evolved Assets
-      Instincts:  12 active / 5 archived
-      Skills:     2 (all 100% eval)
-      Agents:     1 (debugger)
-      Hooks:      3 configured
-      Commands:   6 available
-      Rules:      2 active
+[2/5] Instinct Routing
+      Routed: 2 instincts (1→hook, 1→rule)
+      Archived: 2 (implemented)
+      Skills: 2 (all 100% eval)
+      Remaining: 8 active instincts
 ```
-
-If skills have eval specs, run `/eval-skill` and report pass rates.
 
 ### Phase 3: Research & Suggest
 

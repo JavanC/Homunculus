@@ -97,10 +97,30 @@ function extractInstinct(analysis) {
     .map(([tool, count]) => `${tool}: ${count} times`)
     .join(', ');
 
+  // Read architecture.yaml goal names for goal_path tagging
+  let goalHint = '';
+  try {
+    const archFile = path.join(BASE_DIR, 'architecture.yaml');
+    if (fs.existsSync(archFile)) {
+      const archContent = fs.readFileSync(archFile, 'utf8');
+      const goals = [...archContent.matchAll(/^    (\w+):\s*$/gm)].map(m => m[1]).filter(g => !['goals', 'metrics', 'agents', 'health_check', 'test_config'].includes(g));
+      goalHint = goals.length > 0 ? `\nGoal tree top-level goals: ${goals.join(', ')}` : '';
+    }
+  } catch {}
+
   const prompt = `Based on this session's tool usage patterns, extract ONE behavioral instinct that would be useful to remember for future sessions.
 
 Tool usage: ${toolSummary}
 Total observations: ${analysis.total_observations}
+${goalHint}
+
+Implementation mechanisms (pick the best fit for suggested_mechanism):
+- hook: deterministic, every time, zero AI judgment (e.g. lint after edit)
+- rule: path-scoped guidance for specific directories
+- skill: reusable knowledge collection with eval spec
+- script: periodic automation, no AI needed at runtime
+- agent: isolated context, specialist role
+- system: infrastructure-level
 
 Write the instinct as a markdown file with this format:
 
@@ -110,6 +130,8 @@ category: one of [coding, debugging, workflow, communication, tool-usage]
 confidence: 0.7
 extracted: "${getDateString()}"
 source: "session observation"
+suggested_mechanism: hook|rule|skill|script|agent|system
+goal_path: "top_level_goal.sub_goal or unrooted if no match"
 ---
 
 ## Pattern
