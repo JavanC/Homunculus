@@ -1,12 +1,12 @@
 # Reference Implementation
 
-This is a snapshot of a real Homunculus system after **16 days of evolution** (1,270 commits).
+This is a snapshot of a real Homunculus system after **3 weeks of evolution** (1,335 commits).
 
 ## What's Here
 
 ```
 reference/
-├── architecture.yaml          # Real goal tree (9 goals, 46+ sub-goals)
+├── architecture.yaml          # Real goal tree (10 goals, 46+ sub-goals)
 ├── evolved-skills/            # 10 evolved skills (all 100% eval pass)
 │   ├── api-system-diagnosis.md
 │   ├── assistant-system-management.md
@@ -24,7 +24,9 @@ reference/
 │   │   ├── ch10-cli-sdk.md
 │   │   └── ch11-output-versions.md
 │   ├── development-verification-patterns.md
+│   ├── evolution-methodology-patterns.md
 │   ├── multi-agent-design-patterns.md
+│   ├── resilience-and-state-patterns.md
 │   ├── shell-automation-patterns.md
 │   ├── tdd-workflow.md
 │   └── workflows.md
@@ -32,20 +34,20 @@ reference/
 │   ├── assistant-explorer.md  (Haiku — fast, read-only exploration)
 │   ├── shell-debugger.md      (Sonnet — shell script diagnosis)
 │   └── tdd-runner.md          (Sonnet — TDD red-green cycles)
-└── evolved-evals/             # 10 eval specs (117 total scenarios)
+└── evolved-evals/             # 10 eval specs (135 total scenarios)
 ```
 
 ## Key Numbers
 
 | Metric | Value |
 |--------|-------|
-| System age | 15 days |
-| Total instincts generated | 174 (90 active + 84 auto-archived) |
+| System age | 3 weeks |
+| Total instincts generated | 179 (24 active + 155 auto-archived) |
 | Evolved skills | 10, all 100% eval pass |
-| Eval scenarios | 117 total |
+| Eval scenarios | 135 total |
 | Evolved agents | 3 |
-| Goal tree | 9 root goals, 46+ sub-goals |
-| Nightly agent commits | 134 across 11 nights |
+| Goal tree | 10 root goals, 46+ sub-goals |
+| Nightly agent commits | 155 autonomous |
 
 ## How to Use This
 

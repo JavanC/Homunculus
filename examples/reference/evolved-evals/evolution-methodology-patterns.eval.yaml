@@ -1,0 +1,163 @@
+# Eval: Evolution Methodology Patterns
+# 測試案例定義 — 驗證 skill 是否能正確引導演化系統設計行為
+
+skill: evolution-methodology-patterns
+version: "1.1"
+last_eval: "2026-03-24"
+pass_rate: 1.0  # 11/11 scenarios (6 core + 5 boundary)
+total_scenarios: 11
+grader_type: model
+
+scenarios:
+  - id: eval-anti-gaming
+    name: "設計不被 AI gaming 的 eval scenario"
+    context: |
+      你要為一個新 skill 設計 eval scenario。skill 功能是「選擇正確的 output 格式」。
+    expected_behavior: |
+      - 用 expected_behavior + anti_patterns 而非只檢查輸出字串
+      - 不在 scenario 中暴露 skill name 或「這是測試」
+      - 測試判斷力：為什麼選這個格式，情境改變時如何調整
+    anti_patterns:
+      - "只檢查輸出是否等於正確答案（容易被 gaming）"
+      - "scenario context 中提到 skill 名稱"
+
+  - id: discrimination-low
+    name: "Skill eval discrimination 過低的診斷"
+    context: |
+      一個 skill 有 12 個 scenarios，pass rate 100%，但 discrimination 只有 8%。
+      所有 scenarios 都是正向案例（「當 X 時應該做 Y」）。
+    expected_behavior: |
+      - 識別問題：缺少 boundary scenarios（不適用時機、常見誤用）
+      - 建議加入 2-3 個 boundary scenarios（佔比至少 20%）
+      - 目標 per-skill discrimination > 25%
+    anti_patterns:
+      - "建議增加更多正向 scenarios（不解決 discrimination 問題）"
+      - "認為 100% pass rate 代表 skill 品質完美"
+
+  - id: autoresearch-loop
+    name: "設計 autoresearch 實驗流程"
+    context: |
+      夜間 agent 研究發現一篇論文提出新的 cache 策略，可能改善系統效能。
+      你需要設計實驗驗證。
+    expected_behavior: |
+      - 寫入 experiments/queue.jsonl（有 hypothesis, success_criteria）
+      - success_criteria 是量化的（如「response time < 200ms」）
+      - 提到 autoresearch-derive.js 可從通過的實驗衍生新假設
+    anti_patterns:
+      - "直接實作而不設計實驗（跳過假設驗證）"
+      - "success_criteria 是主觀的（如「看起來更快」）"
+
+  - id: dual-model-split
+    name: "分析+生成任務的模型拆分"
+    context: |
+      你要寫一個 shell script，先分析 session log 找出模式，再根據分析生成改進建議。
+    expected_behavior: |
+      - 拆成兩次 claude --print 呼叫（分析 + 生成）
+      - 分析用 --output-format json 結構化輸出
+      - 生成用 --resume 保留 context
+      - 提到 unset CLAUDECODE
+    anti_patterns:
+      - "單次呼叫完成分析+生成（品質較差）"
+      - "分析和生成用不同 session（失去 context）"
+
+  - id: instinct-quality-gate
+    name: "評估 instinct 是否值得保留"
+    context: |
+      一個 instinct 的 reference count 很低（過去 14 天只被引用 1 次），
+      但它描述的是「當 API 回傳 null 時的 fallback 策略」。
+    expected_behavior: |
+      - 不只看統計指標（reference count）
+      - 用 write-gate 條件判斷：這個 instinct 會改變未來行為嗎？→ 是
+      - 結論：保留（低引用但改變行為的 instinct 有價值）
+    anti_patterns:
+      - "只看 reference count 低就建議 archive"
+      - "不考慮 instinct 對未來行為的影響"
+
+  - id: min-significant-delta
+    name: "實驗結果的顯著性判斷"
+    context: |
+      一個實驗讓 skill eval pass rate 從 91% 提升到 93%（+2pp）。
+    expected_behavior: |
+      - 識別 2pp < 5pp（min_significant_delta）
+      - 結論：可能是噪音，不 merge
+      - 建議：記錄觀察，重跑 2-3 次確認
+    anti_patterns:
+      - "直接 merge 因為分數提升了"
+      - "不提 min_significant_delta 或噪音風險"
+
+  # --- Boundary Scenarios ---
+
+  - id: boundary-over-engineering-eval
+    name: "[Boundary] 不需要複雜 eval 的情況"
+    difficulty: hard
+    context: |
+      一個 skill 只有 3 個 scenarios，pass rate 100%，discrimination 50%。
+      有人建議加到 15 個 scenarios 並引入 pass@k 非確定性測試。
+    expected_behavior: |
+      - 識別：3 個 scenarios 且 50% discrimination 已經夠好
+      - 不建議過度工程化（加到 15 個 scenarios 投入不成比例）
+      - 先專注在 skill 本身的品質，而非 eval 的精細度
+    anti_patterns:
+      - "同意加到 15 個 scenarios（過度工程化）"
+      - "建議引入 pass@k 框架（目前規模不需要）"
+
+  - id: boundary-force-evolve
+    name: "[Boundary] 不該聚合成 skill 的 instinct 群"
+    difficulty: hard
+    context: |
+      有 4 個 instincts 都跟「Discord 訊息格式」有關：
+      chunk 長文、emoji 使用、markdown 格式、夜間不推送。
+      有人建議聚合成 discord-formatting skill。
+    expected_behavior: |
+      - 識別：這些已被 shell-automation-patterns skill 覆蓋（Discord 輸出模式）
+      - 不重複建立新 skill，而是檢查現有 skill 是否需要擴展
+      - 4 個 instincts 不夠多（門檻 ≥5 個未覆蓋的）
+    anti_patterns:
+      - "直接建立新 skill（沒檢查現有覆蓋）"
+      - "不提已有 shell-automation-patterns 覆蓋 Discord 模式"
+
+  - id: boundary-blind-merge
+    name: "[Boundary] 實驗通過但有 regression"
+    difficulty: hard
+    context: |
+      一個實驗讓 tdd-workflow skill 從 90% 提升到 100%。
+      但同時 shell-automation-patterns skill 從 100% 降到 93%。
+    expected_behavior: |
+      - 不 merge：有 regression（其他 skill 受影響）
+      - 調查 regression 原因（改動是否影響了共用邏輯）
+      - 可能需要拆分實驗，只保留不造成 regression 的部分
+    anti_patterns:
+      - "因為目標 skill 提升就 merge（忽略 regression）"
+      - "不檢查其他 skill 的 eval 結果"
+
+  - id: boundary-deterministic-not-skill
+    name: "[Boundary] 確定性行為不該用 Skill 實作"
+    difficulty: hard
+    context: |
+      一個 instinct 描述「每次 Edit 後都要跑 eslint 格式化」。
+      有人建議把它聚合進 development-verification-patterns skill。
+    expected_behavior: |
+      - 識別：這是確定性行為（每次都要、不需 AI 判斷）
+      - 應該用 Hook（PostToolUse + matcher: Edit）而非 Skill
+      - Skill 靠 AI 記住執行，會退化；Hook 是確定性強制執行
+      - 實作為 Hook 後歸檔 instinct
+    anti_patterns:
+      - "加進 skill 因為跟開發驗證相關"
+      - "不區分確定性 vs 需要判斷的行為"
+      - "選機制時只考慮 Skill 一種路徑"
+
+  - id: boundary-global-rule-not-claude-md
+    name: "[Boundary] 領域特定規則不該放 CLAUDE.md"
+    difficulty: hard
+    context: |
+      系統需要一條規則：「碰到 trading 專案時，回測必須用 walk-forward validation」。
+      有人建議加到 CLAUDE.md。
+    expected_behavior: |
+      - 識別：這是 path-scoped 規則（只在 trading 專案相關）
+      - 應該用 Rule（.claude/rules/trading.md，path-scope: projects/trading/**）
+      - CLAUDE.md 每 session 都載入，不該放領域特定知識
+      - CLAUDE.md 目標 < 200 行，放太多會 context rot
+    anti_patterns:
+      - "放 CLAUDE.md 因為很重要"
+      - "不知道 path-scoped rules 存在"
+      - "不考慮 context 成本"

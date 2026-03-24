@@ -19,7 +19,7 @@ npx homunculus-code init
 
 One command. Define your goals. Your assistant starts evolving.
 
-> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 174 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 19 automation scripts. The nightly agent made 134 autonomous commits — improving the system while the developer slept. [See results →](#real-world-results)
+> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 179 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 24 automation scripts. The nightly agent made 155 autonomous commits — improving the system while the developer slept. [See results →](#real-world-results)
 
 ---
 
@@ -347,7 +347,7 @@ You can also run `/hm-night` manually anytime to trigger a cycle on demand.
 - Approve experiment: context reduction via skill splitting
 ```
 
-In our reference system, the nightly agent produced **134 autonomous commits** — routing instincts to the right mechanisms, evolving skills, running experiments, researching better approaches, and archiving outdated patterns. All without any human input.
+In our reference system, the nightly agent produced **155 autonomous commits** — routing instincts to the right mechanisms, evolving skills, running experiments, researching better approaches, and archiving outdated patterns. All without any human input.
 
 The nightly agent is what turns Homunculus from "a tool you use" into "a system that grows on its own."
 
@@ -362,19 +362,19 @@ Built and tested on a real personal AI assistant. In **3 weeks** (starting from 
 | What evolved | Count | Details |
 |-------------|-------|---------|
 | Goal tree | **10 goals / 46+ sub-goals** | Each with health checks and metrics |
-| Instincts | **174** | 90 active + 84 auto-archived (system prunes itself) |
-| Skills | **10** | All 100% eval pass rate (117 test scenarios) |
-| Experiments | **14** | Structured A/B tests with pass/fail tracking |
+| Instincts | **179** | 24 active + 155 auto-archived (system prunes itself) |
+| Skills | **10** | All 100% eval pass rate (135 test scenarios) |
+| Experiments | **15** | Structured A/B tests with pass/fail tracking |
 | Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
-| Scheduled agents | **4** | Nightly heartbeat, Discord bridge, daily news, trading |
+| Scheduled agents | **5** | Nightly heartbeat, Discord bridge, daily news, trading × 2 |
 | Hooks | **11** | Observation, compaction, quality gates |
-| Scripts | **19** | Session lifecycle, health checks, evolution reports |
+| Scripts | **24** | Session lifecycle, health checks, evolution reports |
 | Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
 | Rules | **6** | Core patterns, evolution system, knowledge management |
 | ADRs | **8** | Architecture decision records |
-| Total commits | **1,270** | Mostly automated by nightly agent |
+| Total commits | **1,335** | Mostly automated by nightly agent |
 
-The nightly agent alone: **134 autonomous commits**.
+The nightly agent alone: **155 autonomous commits**.
 
 The system even evolved its own task management board:
 

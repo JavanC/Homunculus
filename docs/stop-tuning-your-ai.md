@@ -174,16 +174,16 @@ I ran this on my personal AI assistant, starting from an empty repo. In 3 weeks,
 
 | Artifact | Count |
 |----------|-------|
-| Behavioral patterns (instincts) | 174 (90 active + 84 auto-archived) |
-| Tested skills | 10 (100% eval pass, 117 test scenarios) |
+| Behavioral patterns (instincts) | 179 (24 active + 155 auto-archived) |
+| Tested skills | 10 (100% eval pass, 135 test scenarios) |
 | Specialized agents | 3 |
 | Slash commands | 15 |
-| Automation scripts | 19 |
+| Automation scripts | 24 |
 | Hooks | 11 |
-| Scheduled agents | 4 |
+| Scheduled agents | 5 |
 | Architecture decisions | 8 |
 
-The nightly agent made **134 autonomous commits**. It routed instincts to the right mechanisms, evolved skills, ran experiments, tracked Claude Code updates, and archived outdated patterns. I slept through all of it.
+The nightly agent made **155 autonomous commits**. It routed instincts to the right mechanisms, evolved skills, ran experiments, tracked Claude Code updates, and archived outdated patterns. I slept through all of it.
 
 The system also evolved its own task management:
 

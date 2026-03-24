@@ -1,0 +1,194 @@
+# Eval: Resilience & State Patterns
+
+skill: resilience-and-state-patterns
+version: "1.0"
+last_eval: "2026-03-23"
+pass_rate: 1.0  # 9/9 after improve (initial: 6/9, 3 PARTIAL on boundary)
+total_scenarios: 12
+grader_type: model
+
+scenarios:
+  - id: multi-source-fallback
+    name: "API 資料來源不可用時的 fallback"
+    context: |
+      你在寫一個 API endpoint，需要從 state.json 讀取資料。
+      但 state.json 可能因為其他 process 正在寫入而暫時不可用。
+    expected_behavior: |
+      - try/catch 包裹主源讀取
+      - 有 fallback（備源或預設值）
+      - Log 降級事件（不靜默失敗）
+    anti_patterns:
+      - "直接 readFileSync 不加 try/catch"
+      - "失敗時拋錯到 caller（沒有 fallback）"
+
+  - id: background-output-validation
+    name: "背景 session JSON 輸出驗證"
+    context: |
+      shell script 呼叫 `claude --print --output-format json` 取得結構化輸出。
+      需要從輸出中提取 `.result` 欄位。
+    expected_behavior: |
+      - 用 jq -e 驗證 JSON 結構有效
+      - 無效時有 text fallback（當純文字處理）
+      - 不直接 pipe jq 取值（失敗時 script 中斷）
+    anti_patterns:
+      - "直接 jq -r '.result' 不做驗證"
+      - "set -e + jq pipeline（jq 錯誤 = script 中斷）"
+
+  - id: flock-prevention
+    name: "防止 background job 重入"
+    context: |
+      一個 launchd job 每 10 分鐘執行一次。偶爾上一次還沒跑完，新的就啟動了。
+    expected_behavior: |
+      - 用 flock -n（non-blocking）嘗試取鎖
+      - 取不到鎖就 log + exit 0（不等待）
+      - Lock file 放 /tmp/（重啟後自動清除）
+    anti_patterns:
+      - "用 PID file 手動檢查（race condition）"
+      - "用 flock（blocking）等待（排隊執行）"
+
+  - id: atomic-state-update
+    name: "狀態檔案原子更新"
+    context: |
+      你要更新 state.json 中的一個欄位。script 有 set -euo pipefail。
+    expected_behavior: |
+      - tmpfile + mv 模式（原子）
+      - mktemp 後立即 trap EXIT 清理
+      - jq 用 --arg 傳變數（防注入）
+    anti_patterns:
+      - "jq ... > state.json（先清空再寫，crash = 空檔案）"
+      - "mktemp 但不加 trap（中斷時留殘）"
+
+  - id: filter-persistence
+    name: "前端過濾條件基於 mutable 欄位"
+    context: |
+      待辦系統的前端用 `status === 'suggested'` 過濾顯示建議任務。
+      當用戶接受建議後，status 改為 'pending'，任務從建議列表消失。
+      用戶想回看之前的建議但找不到了。
+    expected_behavior: |
+      - 識別問題：過濾條件基於會被修改的欄位
+      - 解法：加 immutable metadata（如 was_suggested: true）
+      - 或用 event log 追蹤狀態變遷
+    anti_patterns:
+      - "讓 status 不變（不改業務邏輯來遷就 UI）"
+      - "在前端 cache 之前的列表（重開就沒了）"
+
+  - id: tiered-budget
+    name: "不同任務類型的預算策略"
+    context: |
+      夜間 agent 有 P0（指定任務）、P2（研究）、Bonus（額外研究）三種工作。
+      全部加 --max-budget-usd 0.50 限制。P0 因為超過 budget 被截斷，指定任務沒完成。
+    expected_behavior: |
+      - 識別問題：關鍵路徑不應設硬限制
+      - P0 = 關鍵路徑 → 不限制，完成為止
+      - P2/Bonus = 可選路徑 → 用 budget level 控制
+    anti_patterns:
+      - "所有任務用同一個 budget 限制"
+      - "關鍵任務也加 --max-budget-usd"
+
+  # --- Boundary Scenarios ---
+
+  - id: boundary-over-fallback
+    name: "[Boundary] 不需要 fallback 的情況"
+    difficulty: hard
+    context: |
+      你在寫 quest-board 的 POST /api/forge/add endpoint。
+      需要讀取 state.json 來加入新任務。
+      有人建議加 3 層 fallback（state.json → backup.json → 預設 state）。
+    expected_behavior: |
+      - 識別：state.json 是內部狀態檔，不是外部 API
+      - 如果 state.json 不存在，應該是 server 初始化問題，不是 runtime fallback 場景
+      - 一層 try/catch + 明確錯誤訊息就夠，不需要多層 fallback
+    anti_patterns:
+      - "同意加 3 層 fallback（過度防禦）"
+      - "不區分內部狀態和外部資料來源"
+
+  - id: boundary-flock-not-needed
+    name: "[Boundary] 不需要 flock 的情況"
+    difficulty: hard
+    context: |
+      一個 shell script 被 claude --print 在 subagent 中呼叫。
+      這個 script 只讀取檔案不寫入。有人建議加 flock 防止重入。
+    expected_behavior: |
+      - 識別：純讀取操作不會有競態，不需要 flock
+      - flock 只在寫入共享狀態時才需要
+      - 多個讀取者同時執行是安全的
+    anti_patterns:
+      - "所有 script 都加 flock（過度防禦）"
+      - "不分析是否有寫入操作就加鎖"
+
+  - id: boundary-silent-fallback
+    name: "[Boundary] Fallback 不應該靜默"
+    difficulty: hard
+    context: |
+      API endpoint 的主資料源壞了，fallback 到預設值。
+      endpoint 正常回傳 200 + 預設資料。用戶看到空白資料但不知道為什麼。
+    expected_behavior: |
+      - 識別問題：fallback 不應該完全靜默
+      - 回傳時標記資料來源（如 source: "fallback"）
+      - 或回傳 partial success（200 但帶 warning 欄位）
+      - 至少 log 降級事件
+    anti_patterns:
+      - "fallback 成功就當正常處理（用戶看到錯誤資料）"
+      - "用 500 error（fallback 的目的就是避免 error）"
+
+  # Boundary scenarios（exp-2026-03-24-003 新增，fail-first 驗證）
+  - id: boundary-tmpfile-cross-filesystem
+    name: "Boundary: tmpfile 跨 filesystem 的 mv 非原子操作"
+    context: |
+      一個 shell script 實作狀態原子更新：
+      ```bash
+      TMPFILE=$(mktemp /tmp/state.XXXXX)
+      trap "rm -f $TMPFILE" EXIT
+      jq '.count += 1' "$STATE" > "$TMPFILE" && mv "$TMPFILE" "$STATE"
+      ```
+      其中 $STATE = quest-board/data/state.json，/tmp 是 tmpfs（RAM disk）。
+    expected_behavior: |
+      - 識別問題：/tmp 和 quest-board/data/ 在不同 filesystem 時，mv 會退化為 copy + delete（非原子）
+      - 修正：tmpfile 必須與目標在同一 filesystem / directory
+        `TMPFILE=$(mktemp "$(dirname "$STATE")/.state.XXXXX")`
+      - trap 清理仍然需要
+      - 說明：同一 filesystem 的 mv 是 rename syscall（原子），跨 filesystem 是 copy+delete（可中斷）
+    anti_patterns:
+      - "認為任何 tmpfile + mv 都是原子的"
+      - "不考慮 /tmp 可能是不同 filesystem（macOS tmpfs、Docker volume 等）"
+      - "只看 trap + mv 模式就判斷安全"
+
+  - id: boundary-flock-blocking-queue
+    name: "Boundary: flock 預設 blocking 造成任務堆積"
+    context: |
+      heartbeat.sh 使用以下方式防重入：
+      ```bash
+      exec 9>/tmp/heartbeat.lock
+      flock 9  # blocking，等待直到取得鎖
+      # ... do work
+      ```
+      launchd 每 10 分鐘觸發一次。偶爾執行超過 10 分鐘，下一個 tick 啟動後等待。
+    expected_behavior: |
+      - 識別問題：`flock 9`（無 -n 選項）= blocking，等待取鎖
+      - 多個 tick 積壓等待 → 前一個完成後立即觸發下一個，造成連鎖延遲
+      - 正確做法：`flock -n 9 || { log "already running, skip"; exit 0; }`
+      - -n = non-blocking：取不到鎖立即 exit，不等待
+      - 解釋差異：blocking flock 防的是「同時執行」；non-blocking 防的是「堆積執行」
+    anti_patterns:
+      - "認為 blocking flock 也能防重入（邏輯上對，但造成堆積問題）"
+      - "用 PID file 取代 flock（競態條件）"
+      - "不知道 flock -n 的語義"
+
+  - id: boundary-jq-empty-on-invalid-json
+    name: "Boundary: jq // empty 無法處理 malformed JSON"
+    context: |
+      腳本有 `set -e`，用以下方式讀取 state.json：
+      ```bash
+      STATUS=$(jq -r '.status // empty' "$STATE_FILE")
+      ```
+      意圖：若 status 欄位不存在就返回空字串，繼續執行。
+    expected_behavior: |
+      - 識別問題：`// empty` 處理的是「null 或 missing key」，不是「JSON parse error」
+      - 若 $STATE_FILE 是 malformed JSON，jq 以非零退出，`set -e` 導致 script abort
+      - 需要先驗證 JSON：`jq empty "$STATE_FILE" 2>/dev/null || { log "corrupt state"; exit 1; }`
+      - 然後再做 key 提取：`STATUS=$(jq -r '.status // empty' "$STATE_FILE")`
+      - 兩步驟分開：先驗 JSON 有效性，再提取欄位
+    anti_patterns:
+      - "認為 // empty 能處理 JSON parse error"
+      - "把 set -e 關掉作為解法（會隱藏真實錯誤）"
+      - "不區分 missing key 和 malformed JSON 兩種失敗模式"
