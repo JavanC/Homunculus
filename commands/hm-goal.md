@@ -109,9 +109,39 @@ Write the file using the Write tool.
 
 ```
 ✅ architecture.yaml created with N goals!
+```
 
-Your system is ready to evolve. Run /hm-night to start
-your first evolution cycle.
+### Step 7: Offer nightly agent setup (ONE question)
+
+> "Want to set up the nightly agent? It runs `/hm-night` automatically while you sleep — evolving your system overnight."
+>
+> "Options: **yes** (I'll configure it now) / **no** (I'll run /hm-night manually)"
+
+If yes:
+
+1. Create `scripts/heartbeat.sh`:
+   ```bash
+   #!/usr/bin/env bash
+   set -euo pipefail
+   cd "$(dirname "$0")/.."
+   unset CLAUDECODE
+   claude -p "/hm-night" --model claude-sonnet-4-6 --max-budget-usd 1.00
+   ```
+2. `chmod +x scripts/heartbeat.sh`
+3. Detect OS and configure scheduler:
+   - **macOS** → create launchd plist at `~/Library/LaunchAgents/com.homunculus.heartbeat.plist` (runs at 2am, with PATH including `~/.local/bin:/opt/homebrew/bin`), then `launchctl load` it
+   - **Linux** → add cron entry `0 2 * * * cd /path/to/project && bash scripts/heartbeat.sh`
+4. Report:
+   ```
+   ✅ Nightly agent configured! It will run at 2:00 AM daily.
+
+   Your system is ready. Use /hm-night to run a cycle now,
+   or let the nightly agent handle it while you sleep.
+   ```
+
+If no:
+```
+No problem! Run /hm-night anytime to evolve manually.
 ```
 
 ## Rules

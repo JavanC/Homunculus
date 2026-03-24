@@ -502,6 +502,18 @@ Claude's memory records facts. Homunculus evolves *behavior* — tested skills, 
 OpenClaw is excellent at self-extending. Homunculus solves a different problem: autonomous, goal-directed evolution. It decides what needs improving (via goal health), validates improvements (via evals), and does the work overnight (via the nightly agent). You could use both: OpenClaw for on-demand capability extension, Homunculus for the autonomous evolution layer on top.
 </details>
 
+<details>
+<summary><strong>I see hook errors on startup (SessionStart / Stop)</strong></summary>
+
+Those are from your own user-level hooks (`~/.claude/settings.json`), not from Homunculus. If your hooks use relative paths like `node scripts/foo.js`, they'll fail in projects that don't have those scripts. Fix by adding guards:
+
+```json
+"command": "test -f scripts/foo.js && node scripts/foo.js || true"
+```
+
+Homunculus only adds hooks to the project-level `.claude/settings.json`.
+</details>
+
 ---
 
 ## Blog Posts
