@@ -304,7 +304,7 @@ You can also run `/hm-night` manually anytime to trigger a cycle on demand.
  │  P1: Evolution cycle                        │
  │    Route instincts → 8 mechanisms           │
  │    Eval + improve all implementations       │
- │    Review: best mechanism per goal?          │
+ │    Review: best mechanism per goal?         │
  │                                             │
  │  P2: Research (cross-night dedup)           │
  │                                             │
