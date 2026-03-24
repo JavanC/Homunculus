@@ -1,54 +1,33 @@
-# Nightly Agent Setup
+# Nightly Agent
 
-The nightly agent is what makes Homunculus truly autonomous. It runs a heartbeat loop while you sleep — checking goal health, evolving skills, researching improvements, and running experiments.
+The nightly agent runs `/hm-night` autonomously while you sleep — routing instincts to the right mechanism, evaluating implementations, reviewing goal health, researching improvements, and running experiments.
 
-## Prerequisites
+## Quick Setup
 
-- Homunculus initialized in your project (`npx homunculus init`)
-- Claude Code CLI installed (`~/.local/bin/claude`)
-- macOS (launchd) or Linux (cron)
+The easiest way: run `/hm-goal` in Claude Code. After defining your goals, it asks if you want to enable the nightly agent. Say yes, and it configures the scheduler for you.
 
-## How It Works
+You can also run `/hm-night` manually anytime.
 
-The nightly agent is a shell script that runs on a schedule. Each "tick" of the heartbeat:
+## What It Does
 
-1. **Health Check** — Scans `architecture.yaml`, runs each goal's `health_check.command`
-2. **Evolve** — Runs `/evolve --auto` to converge instincts → skills → eval → improve
-3. **Research** — Uses Claude to scan for better implementations of unhealthy goals
-4. **Experiment** — Generates hypotheses, runs experiments in git worktrees
-5. **Report** — Produces a morning report summarizing all changes
+Each night, the agent runs a phase pipeline:
 
-## Setup (macOS — launchd)
+| Phase | What happens |
+|-------|-------------|
+| **P0** | Complete assigned high-priority tasks |
+| **P1** | Evolution cycle — route instincts to 8 mechanisms (hook/rule/skill/script/agent/...), eval + improve skills, review workflow/subagent health, check all mechanisms working, review goal implementations |
+| **P2** | Research — scan tech news, changelogs, community (with cross-night dedup) |
+| **P3** | Experiments — generate hypotheses from weak goals, test in isolated worktrees |
+| **P4** | Sync — update CLAUDE.md, architecture.yaml, memory |
+| **Bonus** | Extra P2/P3 rounds if budget allows |
 
-### 1. Create the heartbeat script
+## Manual Setup
 
-```bash
-#!/usr/bin/env bash
-# heartbeat.sh — Nightly evolution agent
-set -euo pipefail
+If `/hm-goal` didn't set it up, or you prefer manual configuration:
 
-cd /path/to/your/project
-LOG="heartbeat-$(date +%Y%m%d).log"
+### macOS (launchd)
 
-echo "[$(date)] Starting nightly evolution..." >> "$LOG"
-
-# Unset CLAUDECODE to avoid nested session conflicts
-unset CLAUDECODE
-
-# Run evolution pipeline
-claude -p "Run /evolve --auto. Then check goal health in architecture.yaml. \
-Research any unhealthy goals. Generate a morning report." \
-  --model claude-sonnet-4-6 \
-  --max-budget-usd 2.00 \
-  --no-session-persistence \
-  >> "$LOG" 2>&1
-
-echo "[$(date)] Nightly evolution complete." >> "$LOG"
-```
-
-### 2. Create the launchd plist
-
-Save to `~/Library/LaunchAgents/com.homunculus.heartbeat.plist`:
+Create `~/Library/LaunchAgents/com.homunculus.heartbeat.plist`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -60,7 +39,7 @@ Save to `~/Library/LaunchAgents/com.homunculus.heartbeat.plist`:
     <string>com.homunculus.heartbeat</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/path/to/your/project/heartbeat.sh</string>
+        <string>/path/to/your/project/scripts/heartbeat.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -82,49 +61,39 @@ Save to `~/Library/LaunchAgents/com.homunculus.heartbeat.plist`:
 </plist>
 ```
 
-### 3. Load the agent
-
 ```bash
 launchctl load ~/Library/LaunchAgents/com.homunculus.heartbeat.plist
 ```
 
-## Setup (Linux — cron)
+### Linux (cron)
 
 ```bash
-# Run at 2 AM every night
-0 2 * * * cd /path/to/your/project && bash heartbeat.sh
+0 2 * * * cd /path/to/your/project && bash scripts/heartbeat.sh
 ```
 
-> Note: cron does not have access to macOS Keychain. If your Claude CLI uses OAuth, use launchd instead.
-
-## Budget Control
-
-The `--max-budget-usd` flag controls how much the nightly agent can spend per run. Start with `$2.00` and adjust based on your needs.
+> macOS note: cron cannot access Keychain. If your Claude CLI uses OAuth, use launchd.
 
 ## Morning Report
 
-After a successful run, the agent produces a report. You can configure it to:
-- Write to a file (`heartbeat/data/morning-report.md`)
-- Send to Discord via webhook
-- Push a desktop notification via `osascript`
+After each run, the agent produces a structured report with:
+- Session summary (phases completed, cost, duration)
+- System evolution (instinct routing, skill evals, mechanism reviews)
+- Research topics (with source URLs and goal relevance tags)
+- Experiments (hypothesis, result, merged or discarded)
+- Suggested actions (prioritized, with forge cost estimates)
+
+Configure delivery via Discord webhook, file output, or desktop notification.
 
 ## Monitoring
 
-Check if the agent ran:
 ```bash
-# Last run time
-ls -la /tmp/homunculus-heartbeat.log
-
-# Recent output
+# Check last run
 tail -50 /tmp/homunculus-heartbeat.log
+
+# Check goal health
+/hm-status
 ```
 
-## Advanced: Multi-Tick Heartbeat
+## Advanced
 
-The reference implementation uses a more sophisticated heartbeat with:
-- **Priority-based task scheduling** (P0-P4)
-- **Budget tracking** across ticks
-- **Experiment queue** management
-- **Cross-tick progress** for long-running tasks
-
-See `examples/reference/` for the full implementation.
+The reference implementation uses a multi-tick heartbeat with budget tracking, cross-tick progress for long tasks, and a circuit breaker that stops the pipeline after consecutive failures. See `examples/reference/` for the full setup.
