@@ -504,6 +504,12 @@ OpenClaw is excellent at self-extending. Homunculus solves a different problem: 
 
 ---
 
+## Blog Posts
+
+- [Stop Tuning Your AI. Let It Tune Itself.](docs/stop-tuning-your-ai.md) — The story behind Homunculus and why goal trees beat manual configuration.
+
+---
+
 ## Philosophy
 
 > "Your AI assistant should be a seed, not a statue."
