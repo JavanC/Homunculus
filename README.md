@@ -151,16 +151,21 @@ The evolution engine then:
 
 ---
 
-## Recent Changes
+## What's New
 
-**v0.6.3** (2026-03-26)
-- `/hm-goal` now scans your existing project (tech stack, tests, CI) before asking questions — goal trees start pre-filled with what you already have
-- `/evolve` routes instincts to the best mechanism (hook, rule, skill, script, agent), not just skills
-- Configurable evolution intensity tiers (`minimal` / `standard` / `full`) via `evolution-config.yaml`
-- Nightly agent properly offers automatic setup on first run
+### v0.6.3 — Project-Aware Goals & Evolution Tiers (Mar 2026)
 
-**v0.5.0** (2026-03-24)
-- Initial public release
+- **Project scanning** — `/hm-goal` now detects your tech stack, tests, CI, and directory structure before asking questions. Goal trees start pre-filled with what you already have
+- **Universal mechanism routing** — `/evolve` routes instincts to the best mechanism (hook, rule, skill, script, agent), not just skills
+- **Evolution intensity tiers** — Configure `minimal` / `standard` / `full` in `evolution-config.yaml` to control depth, frequency, and cost
+- **Nightly agent setup** — First `/hm-night` run properly offers to configure automatic overnight evolution
+
+### v0.5.0 — Initial Release (Mar 2026)
+
+- **Goal tree** — Define what you want in `architecture.yaml`
+- **Observation hook** — Automatically captures behavioral patterns from your sessions
+- **Nightly evolution** — `/hm-night` runs health checks, extracts instincts, evolves skills, and generates reports
+- **6 slash commands** — `/hm-goal`, `/hm-night`, `/hm-status`, `/evolve`, `/eval-skill`, `/improve-skill`
 
 ---
 
