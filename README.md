@@ -151,6 +151,19 @@ The evolution engine then:
 
 ---
 
+## Recent Changes
+
+**v0.6.3** (2026-03-26)
+- `/hm-goal` now scans your existing project (tech stack, tests, CI) before asking questions — goal trees start pre-filled with what you already have
+- `/evolve` routes instincts to the best mechanism (hook, rule, skill, script, agent), not just skills
+- Configurable evolution intensity tiers (`minimal` / `standard` / `full`) via `evolution-config.yaml`
+- Nightly agent properly offers automatic setup on first run
+
+**v0.5.0** (2026-03-24)
+- Initial public release
+
+---
+
 ## Quick Start
 
 ### 1. Install
