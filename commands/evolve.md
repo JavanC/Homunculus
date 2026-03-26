@@ -74,6 +74,45 @@ For nightly agent. Runs the full pipeline:
 3. **Eval**: Run scenario tests on skills with eval specs
 4. **Improve**: Auto-improve skills below 100% (max 3 rounds, rollback on regression)
 
+## Skill Format (agentskills.io compatible)
+
+Every skill file MUST start with YAML frontmatter:
+
+```markdown
+---
+name: <kebab-case-name>
+description: <what it does + when to use it, ≤1024 chars>
+allowed-tools: <space-delimited tool list, e.g. Read Grep Glob Bash>
+compatibility: Designed for Claude Code
+metadata:
+  author: homunculus
+  version: "<version>"
+---
+
+# Skill: <Display Name>
+
+**Version:** <version>
+**Evolved from:** <source instincts>
+
+## Purpose
+<description>
+
+## Steps
+1. ...
+2. ...
+```
+
+### `name` rules (agentskills.io)
+- 1-64 chars, lowercase a-z, digits, hyphens only
+- Cannot start or end with hyphen
+- No consecutive hyphens (`--`)
+
+### `allowed-tools` guide
+- Read-only skill → `Read Grep Glob`
+- Diagnostic skill → `Read Grep Glob Bash`
+- Modifying skill → `Read Grep Glob Bash Write Edit`
+- Multi-agent skill → add `Agent`
+
 ## Notes
 - Archived instincts preserved in `instincts/archived/` (not deleted)
 - Each evolution tracked via git commit
