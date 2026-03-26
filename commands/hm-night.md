@@ -178,7 +178,11 @@ Suggested actions:
 
 The user reviews suggestions and decides which to adopt.
 
+**→ Now proceed to Phase 6 (do not stop here).**
+
 ### Phase 6: Offer nightly agent setup (first run only)
+
+**CRITICAL: This phase MUST run after Phase 5. Do NOT stop after the report. Check and ask before ending.**
 
 **After Phase 5, check if a nightly agent is already configured:**
 - Check if `scripts/heartbeat.sh` exists
