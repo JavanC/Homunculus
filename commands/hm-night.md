@@ -56,7 +56,22 @@ Run through all 5 phases systematically.
 
 This phase does what `/evolve --auto` does. See `/evolve` for the full routing logic.
 
-**2a. Route instincts to the right mechanism:**
+**2a. Instinct Harvesting (RETRIEVE → JUDGE → DISTILL → CONSOLIDATE):**
+
+Before routing, harvest new instincts from today's sessions:
+
+- **RETRIEVE** — Collect candidate patterns from session summaries and observations
+- **JUDGE** — Compare each candidate against existing instincts:
+  | Verdict | Condition | Action |
+  |---------|-----------|--------|
+  | NEW | No similar instinct exists | → DISTILL |
+  | REINFORCE | Similar instinct, same direction | Bump confidence +0.1, update `last_seen` |
+  | SUPERSEDE | Similar instinct, but new pattern is better | Archive old (with `Superseded-by:`), new → DISTILL |
+  | SKIP | One-off behavior, low confidence, or already covered by a skill | Don't write |
+- **DISTILL** — Write new instincts to `homunculus/instincts/personal/` with required fields (description, confidence ≥ 0.7, category, suggested_mechanism, goal_path)
+- **CONSOLIDATE** — Merge highly similar instincts, archive stale ones (>30 days unseen + confidence < 0.5). Keep total < 100.
+
+**2b. Route instincts to the right mechanism:**
 
 Read each instinct in `homunculus/instincts/personal/`. Check `suggested_mechanism` and `goal_path` in the frontmatter:
 
@@ -75,7 +90,7 @@ _Archived: 2026-03-25 | Covered-by: hook:pre-commit.sh | Reason: implemented_
 
 Not every instinct needs to be routed in one night. Focus on clear cases. Ambiguous ones can wait.
 
-**2b. Skill aggregation + eval:**
+**2c. Skill aggregation + eval:**
 
 - 5+ instincts with `suggested_mechanism: skill` covering the same area → aggregate into a skill
 - **Daily mode**: Run `/eval-skill` only on skills that changed today
@@ -124,6 +139,22 @@ If there are simple improvements that can be made right now:
 - Prune outdated instincts (`node scripts/prune-instincts.js --apply`)
 - Improve failing skills (`/improve-skill`)
 - Create a suggested script or hook if straightforward
+
+**Autoresearch loop** (metrics-driven, after queued experiments):
+
+If queued work is done and budget remains, run autoresearch:
+1. Scan quantified metrics, find the weakest one (farthest from target)
+2. Make the smallest change to improve it (one thing at a time, in a worktree)
+3. Benchmark: run the relevant check (eval-skill / tests / health-check)
+4. **Gaming Gate** — if score jumps >5pp:
+   - Count net new lines: `git diff --stat` insertions - deletions
+   - Net new ≤3 lines but >5pp improvement → `gaming_suspected`, DISCARD
+   - Net new >3 lines → pass gaming gate, keep the change
+   - Rationale: real skill improvement needs substantive content (new sections, patterns, examples). Tiny wording tweaks that cause big score jumps likely mean the LLM-judge got pattern-matched.
+5. Keep or discard based on metric delta + gaming gate
+6. Repeat until: all metrics in range / max 5 rounds / 2 consecutive discards
+
+Report: `Autoresearch: N rounds, M kept, K discarded, <metric> X% → Y%`
 
 Report what was done.
 

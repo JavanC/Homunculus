@@ -41,6 +41,29 @@ Pass rate: X/Y (Z%)
 Grade: ⭐⭐⭐⭐⭐ (>= 90)
 ```
 
+## Majority Vote (--passes)
+
+Use `--passes <N>` to reduce LLM-judge noise (e.g., `/eval-skill my-skill --passes 3`).
+
+- Each scenario is evaluated **N times** independently
+- **Majority vote** decides the final result: PASS in >N/2 runs → final PASS, otherwise FAIL
+- PARTIAL counts as 0.5 vote toward PASS
+- N=1 is the default (standard eval)
+- **Recommended: N=3** — reduces single-run noise at only 3x cost
+
+### Report (appended when passes > 1)
+```
+📊 Majority Vote (passes=3):
+Scenario                Votes     Final   Confidence
+───────────────────────────────────────────
+<scenario.name>        3/3 PASS   PASS   unanimous
+<scenario.name>        2/3 PASS   PASS   majority
+<scenario.name>        1/3 PASS   FAIL   majority
+```
+
+### Theory
+From Majority Voting / pass@k research: N=3 majority vote reduces misjudgment rate from p to 3p²-2p³ (at p=0.3: from 30% to 22%).
+
 ## After Evaluation
 
 - Update `last_eval` and `pass_rate` in the eval spec
