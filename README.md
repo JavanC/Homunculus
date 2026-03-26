@@ -180,36 +180,44 @@ Next steps:
 
 ### 2. Define Your Goals
 
-Open Claude Code and type `/hm-goal`. Claude asks one question at a time, then generates your goal tree:
+Open Claude Code and type `/hm-goal`. Claude scans your project first, then asks targeted questions based on what it finds:
 
 ```
 > /hm-goal
 
-Claude: What kind of project is this?
-You:    A personal AI assistant
+Claude: I see a Next.js + TypeScript project with 42 Jest tests
+        and GitHub Actions CI. What's the main purpose of this project?
+You:    A SaaS dashboard for analytics
 
-Claude: What do you spend most time on that you wish was better?
-You:    Keeping up with AI news, too much to follow
+Claude: You have 42 tests already. Is test coverage a pain point,
+        or is something else slowing you down more?
+You:    Deployment is manual and error-prone
 
 Claude: If your AI could fix one thing overnight, what would it be?
-You:    Auto fetch new AI news and give me a morning report
+You:    Automated deployment with proper checks
 
 Claude: Here's your goal tree:
-        🎯 Personal AI Assistant
-        ├── ai_intelligence — Stay ahead on AI developments
-        │   ├── news_curation — Auto-fetch top AI news daily
-        │   └── morning_briefing — Deliver a concise report every morning
-        ├── self_improvement — Get smarter over time
-        │   ├── skill_evolution — Learn new skills from observations
-        │   └── quality — Ensure evolved skills actually work
-        └── productivity — Save the user time
-            └── automation — Automate repetitive workflows
+        🎯 analytics-dashboard
+        ├── code_quality — Ship fewer bugs
+        │   ├── testing — Maintain test coverage
+        │   │   └── realized_by: jest.config.js, tests/ (42 tests) ✓
+        │   └── linting — Consistent code style
+        │       └── realized_by: .eslintrc.js, .prettierrc ✓
+        ├── deployment — Reliable releases
+        │   └── ci_pipeline — Automated checks on every PR
+        │       └── realized_by: .github/workflows/ ✓
+        └── productivity — Move faster
+            └── deploy_automation — One-command deploys
+                └── realized_by: # will evolve ○
 
+        4 goals: 3 already have implementations (✓), 1 will evolve (○)
         Does this look right?
 You:    Great!
 
-Claude: ✅ architecture.yaml created with 3 goals!
+Claude: ✅ architecture.yaml created with 4 goals!
 ```
+
+For new projects with no existing files, Claude falls back to general questions about your project type and goals.
 
 ### 3. Run Your First Evolution Cycle
 
