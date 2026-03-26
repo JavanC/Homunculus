@@ -139,14 +139,14 @@ The system routes each instinct automatically. When it's implemented — as a ho
 
 ### 3. Nightly Autonomy
 
-This changes the equation. Every night, a scheduled agent runs the full pipeline:
+This changes the equation. A scheduled agent runs the evolution pipeline — depth depends on your chosen tier (minimal/standard/full):
 
-1. **Routes** instincts to the right mechanism (hook/rule/skill/script/agent)
-2. **Evaluates** all implementations — skills via eval specs, hooks via error rates, rules via freshness
-3. **Reviews** every goal — is the current mechanism still the best one?
-4. **Researches** better approaches (with cross-night dedup so it doesn't repeat topics)
-5. Runs **experiments** in isolated git worktrees
-6. Writes a **morning report**
+1. **Health check** — verify all goals are working
+2. **Route** instincts to the right mechanism (hook/rule/skill/script/agent)
+3. **Evaluate** implementations — daily: changed skills only; weekly: full re-eval + goal tree review
+4. **Research** better approaches (topic count based on tier, with cross-night dedup)
+5. Run **experiments** (count based on tier)
+6. Write a **morning report**
 
 You get a report like this:
 

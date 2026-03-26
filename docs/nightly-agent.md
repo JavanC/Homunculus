@@ -18,7 +18,6 @@ Control nightly evolution depth via `evolution-config.yaml` (created during `ini
 | Skill eval (changed only) | ✅ | ✅ | ✅ |
 | Research | — | 2 topics | 3-5 topics |
 | Experiments | — | 1/night | 3/night |
-| TDD backfill | — | — | ✅ |
 | Bonus loop | — | — | Optional |
 | Budget (API) | ~$1/night | ~$5/night | ~$15/night |
 

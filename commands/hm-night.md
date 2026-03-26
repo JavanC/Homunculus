@@ -11,7 +11,7 @@ Read `evolution-config.yaml` from the project root at the start. If missing, def
 **Tier controls what runs:**
 - `minimal` — Phase 1 (health) + Phase 2 (instinct routing only) + Phase 5 (report). Skip research & experiments.
 - `standard` — All phases. Research: `research.topics_min`-`research.topics_max` topics. Experiments: `experiments.max_per_night`.
-- `full` — All phases + deeper research + more experiments + TDD backfill.
+- `full` — All phases + deeper research + more experiments + bonus loop.
 
 **Weekly schedule:**
 - Check `schedule.weekly.day` (0=Sun..6=Sat, -1=every day).

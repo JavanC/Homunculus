@@ -71,7 +71,7 @@ function loadEvolutionConfig() {
     tier: 'standard',
     schedule: {
       daily: { instinct_harvest: true, instinct_routing: true, skill_eval_on_change: true,
-               health_check_basic: true, tdd_backfill: false, research: true,
+               health_check_basic: true, research: true,
                experiments: true, bonus_loop: false, sync: true },
       weekly: { day: 0, goal_tree_review: true, full_skill_reeval: true,
                 deep_health_check: true, autoresearch_boost: true }
@@ -91,7 +91,6 @@ function loadEvolutionConfig() {
 
     // Parse booleans
     const boolFields = [
-      ['tdd_backfill', 'schedule.daily.tdd_backfill'],
       ['research:', 'schedule.daily.research'],
       ['experiments:', 'schedule.daily.experiments'],
       ['bonus_loop', 'schedule.daily.bonus_loop'],
@@ -100,7 +99,6 @@ function loadEvolutionConfig() {
       const m = text.match(new RegExp(`${key}\\s*(true|false)`, 'm'));
       if (m) {
         // Simple flat assignment
-        if (key === 'tdd_backfill') defaults.schedule.daily.tdd_backfill = m[1] === 'true';
         if (key === 'research:') defaults.schedule.daily.research = m[1] === 'true';
         if (key === 'experiments:') defaults.schedule.daily.experiments = m[1] === 'true';
         if (key === 'bonus_loop') defaults.schedule.daily.bonus_loop = m[1] === 'true';

@@ -6,7 +6,7 @@
 # Tiers:
 #   minimal  — Instinct harvest + sync only. Cheapest option. (~$0.5/night)
 #   standard — + research + experiments. Good balance. (~$2-3/night) [default]
-#   full     — + TDD backfill + deeper research. For power users. (~$5-10/night)
+#   full     — + deeper research + bonus loop. For power users. (~$5-10/night)
 #
 # Cost estimates assume Claude Sonnet via API. Subscription users pay no extra.
 
@@ -18,7 +18,6 @@ schedule:
     instinct_routing: true       # Route high-confidence instincts to implementations
     skill_eval_on_change: true   # Eval only skills that changed today
     health_check_basic: true     # Quick check: hooks working, CLAUDE.md ok
-    tdd_backfill: false          # Enable for full tier — backfill test coverage
     research: true               # Scan sources for improvements (minimal: false)
     experiments: true            # Run queued experiments (minimal: false)
     bonus_loop: false            # Extra research/experiment rounds until budget runs out

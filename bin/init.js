@@ -164,7 +164,7 @@ This project uses Homunculus for goal-driven evolution.
     console.log('  \x1b[1mEvolution intensity:\x1b[0m');
     console.log('    1) \x1b[2mminimal\x1b[0m  — instinct harvest + sync only (~$0.5/night)');
     console.log('    2) \x1b[1mstandard\x1b[0m — + research + experiments (~$2-3/night) \x1b[32m[recommended]\x1b[0m');
-    console.log('    3) \x1b[1mfull\x1b[0m     — + TDD backfill + bonus loop (~$5-10/night)');
+    console.log('    3) \x1b[1mfull\x1b[0m     — + deeper research + bonus loop (~$5-10/night)');
     console.log('');
 
     const answer = await ask('  Choose (1/2/3, default=2): ');
@@ -180,7 +180,6 @@ This project uses Homunculus for goal-driven evolution.
         config = config.replace(/research: true/g, 'research: false');
         config = config.replace(/experiments: true/g, 'experiments: false');
       } else if (tier === 'full') {
-        config = config.replace(/tdd_backfill: false/, 'tdd_backfill: true');
         config = config.replace(/bonus_loop: false/, 'bonus_loop: true');
         config = config.replace(/topics_min: 2/, 'topics_min: 3');
         config = config.replace(/topics_max: 2/, 'topics_max: 5');

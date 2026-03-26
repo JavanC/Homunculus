@@ -19,7 +19,7 @@ npx homunculus-code init
 
 One command. Define your goals. Your assistant starts evolving.
 
-> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 179 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 24 automation scripts. The nightly agent made 155 autonomous commits — improving the system while the developer slept. [See results →](#real-world-results)
+> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 190 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 24 automation scripts. The nightly agent made 368 autonomous commits — improving the system while the developer slept. [See results →](#real-world-results)
 
 ---
 
@@ -302,7 +302,6 @@ Control how deeply your assistant evolves each night via `evolution-config.yaml`
 | Skill eval (changed only) | ✅ | ✅ | ✅ |
 | Research | — | 2 topics | 3-5 topics |
 | Experiments | — | 1/night | 3/night |
-| TDD backfill | — | — | ✅ |
 | Bonus loop | — | — | Optional |
 | **Est. cost/night** | **~$0.5** | **~$2-3** | **~$5-10** |
 
@@ -383,8 +382,8 @@ Built and tested on a real personal AI assistant. In **3 weeks** (starting from 
 | What evolved | Count | Details |
 |-------------|-------|---------|
 | Goal tree | **10 goals / 46+ sub-goals** | Each with health checks and metrics |
-| Instincts | **179** | 24 active + 155 auto-archived (system prunes itself) |
-| Skills | **10** | All 100% eval pass rate (135 test scenarios) |
+| Instincts | **190** | 33 active + 157 auto-archived (system prunes itself) |
+| Skills | **10** | All 100% eval pass rate (152 test scenarios) |
 | Experiments | **15** | Structured A/B tests with pass/fail tracking |
 | Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
 | Scheduled agents | **5** | Nightly heartbeat, Discord bridge, daily news, trading × 2 |
@@ -393,9 +392,9 @@ Built and tested on a real personal AI assistant. In **3 weeks** (starting from 
 | Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
 | Rules | **6** | Core patterns, evolution system, knowledge management |
 | ADRs | **8** | Architecture decision records |
-| Total commits | **1,335** | Mostly automated by nightly agent |
+| Total commits | **1,367+** | Mostly automated by nightly agent |
 
-The nightly agent alone: **155 autonomous commits**.
+The nightly agent alone: **368 autonomous commits**.
 
 The system even evolved its own task management board:
 
