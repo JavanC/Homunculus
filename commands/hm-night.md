@@ -1,8 +1,22 @@
 # /hm-night — Run One Evolution Cycle
 
-Run the full evolution pipeline: health check → evolve → research → report.
+Run the evolution pipeline. Depth depends on `evolution-config.yaml` (tier + schedule).
 
 **Always communicate in English** regardless of user's global Claude settings.
+
+## Evolution Config
+
+Read `evolution-config.yaml` from the project root at the start. If missing, default to `tier: standard`.
+
+**Tier controls what runs:**
+- `minimal` — Phase 1 (health) + Phase 2 (instinct routing only) + Phase 5 (report). Skip research & experiments.
+- `standard` — All phases. Research: `research.topics_min`-`research.topics_max` topics. Experiments: `experiments.max_per_night`.
+- `full` — All phases + deeper research + more experiments + TDD backfill.
+
+**Weekly schedule:**
+- Check `schedule.weekly.day` (0=Sun..6=Sat, -1=every day).
+- If today matches → run **weekly deep mode**: full skill re-eval, goal tree mechanism review, deep health check.
+- Otherwise → run **daily light mode**: instinct routing + changed skill eval only.
 
 ## Core Principle
 
@@ -62,7 +76,8 @@ Not every instinct needs to be routed in one night. Focus on clear cases. Ambigu
 **2b. Skill aggregation + eval:**
 
 - 5+ instincts with `suggested_mechanism: skill` covering the same area → aggregate into a skill
-- Run `/eval-skill` on skills that have eval specs
+- **Daily mode**: Run `/eval-skill` only on skills that changed today
+- **Weekly mode**: Run `/eval-skill` on ALL skills with eval specs (full re-eval)
 - Run `/improve-skill` on any failing ones
 
 Report:
@@ -75,6 +90,10 @@ Report:
 ```
 
 ### Phase 3: Research & Suggest
+
+**Skip this phase if tier is `minimal`.**
+
+Read `research.topics_min` and `research.topics_max` from evolution-config.yaml for how many topics to research.
 
 1. Scan `architecture.yaml` for goals where `realized_by` is empty or `# will evolve`
 2. For each unimplemented goal, suggest the **most appropriate implementation type**:
@@ -96,6 +115,8 @@ Report:
 3. For goals with failing health checks, suggest fixes using the right implementation type
 
 ### Phase 4: Act (if possible)
+
+**Skip this phase if tier is `minimal`.** Read `experiments.max_per_night` from config for experiment limits.
 
 If there are simple improvements that can be made right now:
 - Prune outdated instincts (`node scripts/prune-instincts.js --apply`)
@@ -170,13 +191,21 @@ The user reviews suggestions and decides which to adopt.
 
 If yes:
 
-1. Create `scripts/heartbeat.sh`:
+1. Create `scripts/heartbeat.sh` (read tier from evolution-config.yaml to set budget):
    ```bash
    #!/usr/bin/env bash
    set -euo pipefail
    cd "$(dirname "$0")/.."
    unset CLAUDECODE
-   claude -p "/hm-night" --model claude-sonnet-4-6 --max-budget-usd 5.00
+   # Read tier from config, set budget accordingly
+   TIER=$(python3 -c "import yaml; print(yaml.safe_load(open('evolution-config.yaml')).get('tier','standard'))" 2>/dev/null || echo "standard")
+   case "$TIER" in
+     minimal)  BUDGET=1  ;;
+     standard) BUDGET=5  ;;
+     full)     BUDGET=15 ;;
+     *)        BUDGET=5  ;;
+   esac
+   claude -p "/hm-night" --model claude-sonnet-4-6 --max-budget-usd "$BUDGET"
    ```
 2. `chmod +x scripts/heartbeat.sh`
 3. Detect OS and configure scheduler:

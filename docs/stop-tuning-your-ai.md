@@ -174,8 +174,8 @@ I ran this on my personal AI assistant, starting from an empty repo. In 3 weeks,
 
 | Artifact | Count |
 |----------|-------|
-| Behavioral patterns (instincts) | 179 (24 active + 155 auto-archived) |
-| Tested skills | 10 (100% eval pass, 135 test scenarios) |
+| Behavioral patterns (instincts) | 190 (33 active + 157 auto-archived) |
+| Tested skills | 10 (100% eval pass, 152 test scenarios) |
 | Specialized agents | 3 |
 | Slash commands | 15 |
 | Automation scripts | 24 |
@@ -183,7 +183,7 @@ I ran this on my personal AI assistant, starting from an empty repo. In 3 weeks,
 | Scheduled agents | 5 |
 | Architecture decisions | 8 |
 
-The nightly agent made **155 autonomous commits**. It routed instincts to the right mechanisms, evolved skills, ran experiments, tracked Claude Code updates, and archived outdated patterns. I slept through all of it.
+The nightly agent made **368 autonomous commits**. It routed instincts to the right mechanisms, evolved skills, ran experiments, tracked Claude Code updates, and archived outdated patterns. I slept through all of it.
 
 The system also evolved its own task management:
 
@@ -205,7 +205,7 @@ The system also measures its own evolution mechanism: instinct survival rate, ev
 Most AI tools hand you more controls. Homunculus gives you three:
 
 1. **Define your goals.** A tree of outcomes you care about.
-2. **Set your boundaries.** Permissions for autonomous action.
+2. **Pick your intensity.** Minimal ($0.5/night), standard ($2-3), or full ($5-10). Subscription users can go full at no extra cost.
 3. **Walk away.** The system handles the rest.
 
 You don't need expertise in prompt engineering, hook configuration, agent orchestration, or skill design. You need clarity on what you want. The system handles the rest.

@@ -8,9 +8,30 @@ The easiest way: run `/hm-night` in Claude Code. The first time it runs, it asks
 
 If `/hm-night` detects an existing scheduler setup, it skips the question.
 
+## Evolution Tiers
+
+Control nightly evolution depth via `evolution-config.yaml` (created during `init`):
+
+| | Minimal | Standard | Full |
+|---|---------|----------|------|
+| Instinct harvest + routing | ✅ | ✅ | ✅ |
+| Skill eval (changed only) | ✅ | ✅ | ✅ |
+| Research | — | 2 topics | 3-5 topics |
+| Experiments | — | 1/night | 3/night |
+| TDD backfill | — | — | ✅ |
+| Bonus loop | — | — | Optional |
+| Budget (API) | ~$1/night | ~$5/night | ~$15/night |
+
+**Weekly deep mode** (configurable day, default Sunday): full skill re-eval, goal tree mechanism review, deep health check. Runs on top of the daily tier.
+
+```bash
+# Change tier
+# Edit evolution-config.yaml → tier: minimal | standard | full
+```
+
 ## What It Does
 
-Each night, the agent runs a phase pipeline:
+Each night, the agent runs a phase pipeline (phases skipped based on tier):
 
 | Phase | What happens |
 |-------|-------------|

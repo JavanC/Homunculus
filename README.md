@@ -292,6 +292,29 @@ This is what makes the system truly autonomous. The nightly agent runs `/hm-nigh
 
 You can also run `/hm-night` manually anytime to trigger a cycle on demand.
 
+### Evolution Tiers
+
+Control how deeply your assistant evolves each night via `evolution-config.yaml` (created during `init`):
+
+| | Minimal | Standard | Full |
+|---|---------|----------|------|
+| Instinct harvest + routing | ✅ | ✅ | ✅ |
+| Skill eval (changed only) | ✅ | ✅ | ✅ |
+| Research | — | 2 topics | 3-5 topics |
+| Experiments | — | 1/night | 3/night |
+| TDD backfill | — | — | ✅ |
+| Bonus loop | — | — | Optional |
+| **Est. cost/night** | **~$0.5** | **~$2-3** | **~$5-10** |
+
+Weekly deep mode (configurable day) adds: full skill re-eval, goal tree mechanism review, deep health check.
+
+```bash
+# Change tier anytime
+# Edit evolution-config.yaml → tier: minimal | standard | full
+```
+
+Subscription users (Max/Team) can run `full` at no extra API cost.
+
 ```
  You go to sleep
         │
@@ -299,20 +322,18 @@ You can also run `/hm-night` manually anytime to trigger a cycle on demand.
  ┌─────────────────────────────────────────────┐
  │  Nightly Agent (phase pipeline)             │
  │                                             │
- │  P0: Assigned tasks                         │
+ │  1. Health check (goal status)              │
  │                                             │
- │  P1: Evolution cycle                        │
+ │  2. Evolution cycle                         │
  │    Route instincts → 8 mechanisms           │
- │    Eval + improve all implementations       │
+ │    Eval + improve implementations           │
  │    Review: best mechanism per goal?         │
  │                                             │
- │  P2: Research (cross-night dedup)           │
+ │  3. Research (cross-night dedup)            │
  │                                             │
- │  P3: Experiments (hypothesis → verify)      │
+ │  4. Act (experiments + quick fixes)         │
  │                                             │
- │  P4: Sync (CLAUDE.md / architecture.yaml)   │
- │                                             │
- │  Bonus: Extra rounds if budget allows       │
+ │  5. Report + sync                           │
  └─────────────────────────────────────────────┘
         │
         ▼

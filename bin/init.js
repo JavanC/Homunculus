@@ -4,9 +4,15 @@
 const fs = require('fs');
 const path = require('path');
 
+const readline = require('readline');
 const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
 const CORE_DIR = path.join(__dirname, '..', 'core');
 const COMMANDS_DIR = path.join(__dirname, '..', 'commands');
+
+function ask(question) {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise(resolve => rl.question(question, ans => { rl.close(); resolve(ans.trim()); }));
+}
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -26,7 +32,7 @@ function copyDir(src, dest) {
   }
 }
 
-function main() {
+async function main() {
   console.log('');
   console.log('  \x1b[1mHomunculus\x1b[0m — Self-evolving AI Assistant');
   console.log('');
@@ -149,6 +155,43 @@ This project uses Homunculus for goal-driven evolution.
   } else {
     fs.writeFileSync(gitignorePath, gitignoreEntries.trim() + '\n');
     console.log('  \x1b[32m✓\x1b[0m Created .gitignore');
+  }
+
+  // 8. Evolution config — tier selection
+  const configDest = path.join(projectDir, 'evolution-config.yaml');
+  if (!fs.existsSync(configDest)) {
+    console.log('');
+    console.log('  \x1b[1mEvolution intensity:\x1b[0m');
+    console.log('    1) \x1b[2mminimal\x1b[0m  — instinct harvest + sync only (~$0.5/night)');
+    console.log('    2) \x1b[1mstandard\x1b[0m — + research + experiments (~$2-3/night) \x1b[32m[recommended]\x1b[0m');
+    console.log('    3) \x1b[1mfull\x1b[0m     — + TDD backfill + bonus loop (~$5-10/night)');
+    console.log('');
+
+    const answer = await ask('  Choose (1/2/3, default=2): ');
+    const tierMap = { '1': 'minimal', '2': 'standard', '3': 'full' };
+    const tier = tierMap[answer] || 'standard';
+
+    const templateSrc = path.join(TEMPLATES_DIR, 'evolution-config.template.yaml');
+    if (fs.existsSync(templateSrc)) {
+      let config = fs.readFileSync(templateSrc, 'utf8');
+      // Apply tier-specific defaults
+      config = config.replace(/^tier: standard/m, `tier: ${tier}`);
+      if (tier === 'minimal') {
+        config = config.replace(/research: true/g, 'research: false');
+        config = config.replace(/experiments: true/g, 'experiments: false');
+      } else if (tier === 'full') {
+        config = config.replace(/tdd_backfill: false/, 'tdd_backfill: true');
+        config = config.replace(/bonus_loop: false/, 'bonus_loop: true');
+        config = config.replace(/topics_min: 2/, 'topics_min: 3');
+        config = config.replace(/topics_max: 2/, 'topics_max: 5');
+        config = config.replace(/max_per_night: 1/, 'max_per_night: 3');
+        config = config.replace(/max_rounds: 5/, 'max_rounds: 10');
+      }
+      fs.writeFileSync(configDest, config);
+      console.log(`  \x1b[32m✓\x1b[0m Created evolution-config.yaml (tier: ${tier})`);
+    }
+  } else {
+    console.log('  \x1b[33m-\x1b[0m evolution-config.yaml already exists');
   }
 
   // Done

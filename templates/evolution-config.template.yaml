@@ -1,0 +1,49 @@
+# Homunculus Evolution Configuration
+#
+# Controls how deeply and frequently your AI assistant evolves.
+# Edit this file to match your budget and preferences.
+#
+# Tiers:
+#   minimal  — Instinct harvest + sync only. Cheapest option. (~$0.5/night)
+#   standard — + research + experiments. Good balance. (~$2-3/night) [default]
+#   full     — + TDD backfill + deeper research. For power users. (~$5-10/night)
+#
+# Cost estimates assume Claude Sonnet via API. Subscription users pay no extra.
+
+tier: standard  # minimal | standard | full
+
+schedule:
+  daily:
+    instinct_harvest: true       # Always on — extract patterns from your usage
+    instinct_routing: true       # Route high-confidence instincts to implementations
+    skill_eval_on_change: true   # Eval only skills that changed today
+    health_check_basic: true     # Quick check: hooks working, CLAUDE.md ok
+    tdd_backfill: false          # Enable for full tier — backfill test coverage
+    research: true               # Scan sources for improvements (minimal: false)
+    experiments: true            # Run queued experiments (minimal: false)
+    bonus_loop: false            # Extra research/experiment rounds until budget runs out
+    sync: true                   # Always on — sync CLAUDE.md, memory, architecture
+  weekly:
+    day: 0                       # 0=Sun, 1=Mon, ..., 6=Sat; -1=run weekly tasks every day
+    goal_tree_review: true       # Review all goals for better implementation methods
+    full_skill_reeval: true      # Re-evaluate ALL skills (not just changed ones)
+    deep_health_check: true      # Full mechanism health check + orphan scan
+    autoresearch_boost: true     # Improve eval discrimination score
+
+# Research & experiment counts
+# Tier defaults when not specified: minimal=0/0, standard=2/1, full=3-5/3
+research:
+  topics_min: 2
+  topics_max: 2
+  dedup_days: 7
+
+experiments:
+  max_per_night: 1
+  max_half_budget: 1
+
+# Bonus loop settings (only applies when bonus_loop: true)
+bonus:
+  max_rounds: 5
+  cutoff_hour: 5
+  cutoff_minute: 30
+  max_idle: 2

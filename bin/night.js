@@ -65,6 +65,72 @@ function parseGoals(yamlContent) {
   return goals;
 }
 
+function loadEvolutionConfig() {
+  const configPath = path.join(projectDir, 'evolution-config.yaml');
+  const defaults = {
+    tier: 'standard',
+    schedule: {
+      daily: { instinct_harvest: true, instinct_routing: true, skill_eval_on_change: true,
+               health_check_basic: true, tdd_backfill: false, research: true,
+               experiments: true, bonus_loop: false, sync: true },
+      weekly: { day: 0, goal_tree_review: true, full_skill_reeval: true,
+                deep_health_check: true, autoresearch_boost: true }
+    },
+    research: { topics_min: 2, topics_max: 2, dedup_days: 7 },
+    experiments: { max_per_night: 1, max_half_budget: 1 },
+    bonus: { max_rounds: 5, cutoff_hour: 5, cutoff_minute: 30, max_idle: 2 }
+  };
+
+  if (!fs.existsSync(configPath)) return defaults;
+
+  try {
+    // Simple YAML parser for our flat config (avoids js-yaml dependency)
+    const text = fs.readFileSync(configPath, 'utf8');
+    const tierMatch = text.match(/^tier:\s*(\w+)/m);
+    if (tierMatch) defaults.tier = tierMatch[1];
+
+    // Parse booleans
+    const boolFields = [
+      ['tdd_backfill', 'schedule.daily.tdd_backfill'],
+      ['research:', 'schedule.daily.research'],
+      ['experiments:', 'schedule.daily.experiments'],
+      ['bonus_loop', 'schedule.daily.bonus_loop'],
+    ];
+    for (const [key] of boolFields) {
+      const m = text.match(new RegExp(`${key}\\s*(true|false)`, 'm'));
+      if (m) {
+        // Simple flat assignment
+        if (key === 'tdd_backfill') defaults.schedule.daily.tdd_backfill = m[1] === 'true';
+        if (key === 'research:') defaults.schedule.daily.research = m[1] === 'true';
+        if (key === 'experiments:') defaults.schedule.daily.experiments = m[1] === 'true';
+        if (key === 'bonus_loop') defaults.schedule.daily.bonus_loop = m[1] === 'true';
+      }
+    }
+
+    // Parse numbers
+    const numMatch = (pattern) => { const m = text.match(pattern); return m ? parseInt(m[1]) : null; };
+    const weeklyDay = numMatch(/day:\s*(-?\d+)/m);
+    if (weeklyDay !== null) defaults.schedule.weekly.day = weeklyDay;
+    const tMin = numMatch(/topics_min:\s*(\d+)/m);
+    if (tMin !== null) defaults.research.topics_min = tMin;
+    const tMax = numMatch(/topics_max:\s*(\d+)/m);
+    if (tMax !== null) defaults.research.topics_max = tMax;
+    const expMax = numMatch(/max_per_night:\s*(\d+)/m);
+    if (expMax !== null) defaults.experiments.max_per_night = expMax;
+
+    return defaults;
+  } catch (e) {
+    console.log(`  ${yellow('!')} Failed to parse evolution-config.yaml, using defaults`);
+    return defaults;
+  }
+}
+
+function isWeeklyRunDay(config) {
+  const day = config.schedule.weekly.day;
+  if (day === -1) return true; // -1 = every day
+  return new Date().getDay() === day;
+}
+
 async function main() {
   console.log('');
   console.log(`  ${bold('🌙 Homunculus — Evolution Cycle')}`);
@@ -76,6 +142,12 @@ async function main() {
     console.log(`  ${red('✗')} Not initialized. Run ${bold('npx homunculus-code init')} first.`);
     process.exit(1);
   }
+
+  // Load evolution config
+  const config = loadEvolutionConfig();
+  const isWeekly = isWeeklyRunDay(config);
+  console.log(`  ${dim(`tier: ${config.tier} | weekly: ${isWeekly} | research: ${config.research.topics_min}-${config.research.topics_max} | experiments: ${config.experiments.max_per_night}`)}`)
+  console.log('');
 
   // ─────────────────────────────────────────
   // Phase 1: Health Check
