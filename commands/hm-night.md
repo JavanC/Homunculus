@@ -54,6 +54,8 @@ Run through all 5 phases systematically.
 
 ### Phase 2: Instinct Routing + Skill Evolution
 
+This phase does what `/evolve --auto` does. See `/evolve` for the full routing logic.
+
 **2a. Route instincts to the right mechanism:**
 
 Read each instinct in `homunculus/instincts/personal/`. Check `suggested_mechanism` and `goal_path` in the frontmatter:
