@@ -56,12 +56,20 @@ Without Homunculus:                      With Homunculus:
 Most AI tools optimize locally — "you did X, so I'll remember X." Homunculus optimizes **globally** — toward goals you define in a tree:
 
 ```
-                    🎯 My AI Assistant
-              ┌──────────┼──────────┐
-              │          │          │
-         Code Quality   Speed    Knowledge
-          ┌────┴────┐    │     ┌────┴────┐
-       Testing  Review  Tasks  Research  Memory
+🎯 my-project
+├── code_quality — Ship fewer bugs
+│   ├── testing — Maintain test coverage
+│   │   └── realized_by: jest.config.js, tests/ (42 tests) ✓
+│   └── linting — Consistent code style
+│       └── realized_by: .eslintrc.js, .prettierrc ✓
+├── speed — Move faster
+│   └── deploy_automation — One-command deploys
+│       └── realized_by: # will evolve ○
+└── knowledge — Learn and remember
+    ├── research — Discover better approaches
+    │   └── realized_by: nightly agent ✓
+    └── memory — Remember what matters
+        └── realized_by: homunculus/instincts/ ✓
 ```
 
 Each node defines **why** it exists, **how** to measure it, and **what** currently implements it:
