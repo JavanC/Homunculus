@@ -72,7 +72,10 @@ Most AI tools optimize locally — "you did X, so I'll remember X." Homunculus o
         └── realized_by: homunculus/instincts/ ✓
 ```
 
-Each node defines **why** it exists, **how** to measure it, and **what** currently implements it:
+Each node defines **why** it exists, **how** to measure it, and **what** currently implements it. **Goals are stable. Implementations evolve.** The system automatically routes each behavior to its optimal mechanism — implementations get replaced and upgraded while goals stay intact.
+
+<details>
+<summary>📖 What does a goal node look like in <code>architecture.yaml</code>?</summary>
 
 ```yaml
 # architecture.yaml — from the reference system
@@ -98,10 +101,10 @@ continuous_evolution:
   goals:
     pattern_extraction:
       purpose: "Learn from every session"
-      realized_by: scripts/evaluate-session.js    # a Node script
+      realized_by: homunculus/scripts/evaluate-session.js
     skill_aggregation:
       purpose: "Converge patterns into tested skills"
-      realized_by: homunculus/evolved/skills/      # evolved artifacts
+      realized_by: homunculus/evolved/skills/
 ```
 
 The `realized_by` field can point to **anything**:
@@ -117,7 +120,7 @@ The `realized_by` field can point to **anything**:
 | Rule | `rules/security.md` | Claude Code behavioral rule |
 | Command | `commands/quality-gate.md` | Slash command workflow |
 
-**Goals are stable. Implementations evolve.** The system automatically routes each behavior to its optimal mechanism — hook, rule, skill, script, agent, or system. Implementations get replaced and upgraded while goals stay intact.
+</details>
 
 ---
 
