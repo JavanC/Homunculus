@@ -19,7 +19,7 @@ Control nightly evolution depth via `evolution-config.yaml` (created during `ini
 | Research | — | 2 topics | 3-5 topics |
 | Experiments | — | 1/night | 3/night |
 | Bonus loop | — | — | Optional |
-| Budget (API) | ~$1/night | ~$5/night | ~$15/night |
+| Budget (API) | ~$0.5/night | ~$2-3/night | ~$5-10/night |
 
 **Weekly deep mode** (configurable day, default Sunday): full skill re-eval, goal tree mechanism review, deep health check. Runs on top of the daily tier.
 
@@ -59,7 +59,7 @@ Create `~/Library/LaunchAgents/com.homunculus.heartbeat.plist`:
     <string>com.homunculus.heartbeat</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/path/to/your/project/scripts/heartbeat.sh</string>
+        <string>/path/to/your/project/homunculus/scripts/heartbeat.sh</string>
     </array>
     <key>StartCalendarInterval</key>
     <dict>
@@ -88,7 +88,7 @@ launchctl load ~/Library/LaunchAgents/com.homunculus.heartbeat.plist
 ### Linux (cron)
 
 ```bash
-0 2 * * * cd /path/to/your/project && bash scripts/heartbeat.sh
+0 2 * * * cd /path/to/your/project && bash homunculus/scripts/heartbeat.sh
 ```
 
 > macOS note: cron cannot access Keychain. If your Claude CLI uses OAuth, use launchd.

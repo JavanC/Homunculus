@@ -469,6 +469,7 @@ After `npx homunculus-code init`:
 ```
 your-project/
 ├── architecture.yaml           # Your goal tree (the brain)
+├── evolution-config.yaml       # Tier + budget settings
 ├── homunculus/
 │   ├── instincts/
 │   │   ├── personal/           # Auto-extracted patterns
@@ -477,7 +478,12 @@ your-project/
 │   │   ├── skills/             # Converged, tested knowledge
 │   │   ├── agents/             # Specialized subagents
 │   │   └── evals/              # Skill evaluation specs
-│   └── experiments/            # A/B test tracking
+│   ├── experiments/            # A/B test tracking
+│   ├── reports/                # Evolution cycle reports
+│   └── scripts/
+│       ├── observe.sh          # Observation hook
+│       ├── evaluate-session.js # Pattern extraction
+│       └── prune-instincts.js  # Automatic cleanup
 ├── .claude/
 │   ├── rules/
 │   │   └── evolution-system.md # How Claude should evolve
@@ -488,12 +494,7 @@ your-project/
 │       ├── eval-skill.md       # /eval-skill
 │       ├── improve-skill.md    # /improve-skill
 │       └── evolve.md           # /evolve
-└── homunculus/
-    ├── ...                     # (instincts, evolved, experiments, reports)
-    └── scripts/
-        ├── observe.sh          # Observation hook
-        ├── evaluate-session.js # Pattern extraction
-        └── prune-instincts.js  # Automatic cleanup
+└── .gitignore                  # Excludes runtime data
 ```
 
 ---
