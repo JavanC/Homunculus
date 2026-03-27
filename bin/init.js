@@ -54,7 +54,7 @@ async function main() {
     'homunculus/evolved/evals',
     'homunculus/experiments',
     'homunculus/reports',
-    'scripts',
+    'homunculus/scripts',
     '.claude/rules',
     '.claude/commands'
   ];
@@ -105,14 +105,34 @@ This project uses Homunculus for goal-driven evolution.
 
   // 4. Copy core scripts
   if (fs.existsSync(CORE_DIR)) {
-    copyDir(CORE_DIR, path.join(projectDir, 'scripts'));
+    copyDir(CORE_DIR, path.join(projectDir, 'homunculus', 'scripts'));
     console.log('  \x1b[32m✓\x1b[0m Copied evolution scripts');
   }
 
-  // 5. Copy slash commands
+  // 5. Copy slash commands (skip existing files)
   if (fs.existsSync(COMMANDS_DIR)) {
-    copyDir(COMMANDS_DIR, path.join(projectDir, '.claude', 'commands'));
-    console.log('  \x1b[32m✓\x1b[0m Added slash commands (/hm-goal, /hm-night, /hm-status)');
+    const commandsDest = path.join(projectDir, '.claude', 'commands');
+    ensureDir(commandsDest);
+    let commandsCopied = 0;
+    let commandsSkipped = 0;
+    for (const entry of fs.readdirSync(COMMANDS_DIR, { withFileTypes: true })) {
+      if (entry.isFile()) {
+        const destFile = path.join(commandsDest, entry.name);
+        if (fs.existsSync(destFile)) {
+          console.log(`  \x1b[33m!\x1b[0m Skipped ${entry.name} (already exists)`);
+          commandsSkipped++;
+        } else {
+          fs.copyFileSync(path.join(COMMANDS_DIR, entry.name), destFile);
+          commandsCopied++;
+        }
+      }
+    }
+    if (commandsCopied > 0) {
+      console.log('  \x1b[32m✓\x1b[0m Added slash commands (/hm-goal, /hm-night, /hm-status)');
+    }
+    if (commandsSkipped > 0 && commandsCopied === 0) {
+      console.log('  \x1b[33m-\x1b[0m All slash commands already exist, skipped');
+    }
   }
 
   // 6. Configure Claude Code hooks
@@ -123,17 +143,35 @@ This project uses Homunculus for goal-driven evolution.
   }
 
   if (!settings.hooks) settings.hooks = {};
+
+  const observeCommand = "bash homunculus/scripts/observe.sh post";
+  const observeEntry = {
+    matcher: "",
+    hooks: [{
+      type: "command",
+      command: observeCommand
+    }]
+  };
+
   if (!settings.hooks.PostToolUse) {
-    settings.hooks.PostToolUse = [{
-      matcher: "",
-      hooks: [{
-        type: "command",
-        command: "bash scripts/observe.sh post"
-      }]
-    }];
+    // No PostToolUse hooks yet — create fresh array
+    settings.hooks.PostToolUse = [observeEntry];
     ensureDir(path.join(projectDir, '.claude'));
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
     console.log('  \x1b[32m✓\x1b[0m Configured observation hook');
+  } else {
+    // PostToolUse array already exists — merge if observe.sh not already present
+    const alreadyPresent = settings.hooks.PostToolUse.some(entry =>
+      Array.isArray(entry.hooks) && entry.hooks.some(h => h.command && h.command.includes('observe.sh'))
+    );
+    if (!alreadyPresent) {
+      settings.hooks.PostToolUse.push(observeEntry);
+      ensureDir(path.join(projectDir, '.claude'));
+      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+      console.log('  \x1b[32m✓\x1b[0m Merged observation hook into existing PostToolUse hooks');
+    } else {
+      console.log('  \x1b[33m-\x1b[0m Observation hook already present in PostToolUse');
+    }
   }
 
   // 7. Create .gitignore additions

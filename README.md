@@ -153,6 +153,13 @@ The evolution engine then:
 
 ## What's New
 
+### v0.7.0 — Non-Invasive Install & Proactivity Design Guide (Mar 2026)
+
+- **Non-invasive install** — Scripts now live in `homunculus/scripts/` instead of the project root `scripts/`, avoiding collisions with existing project tooling
+- **Safe command install** — Slash commands are installed file-by-file; existing commands are preserved with a warning instead of being overwritten
+- **Hook merging** — If `PostToolUse` hooks already exist in `.claude/settings.json`, the observation hook is merged into the array rather than skipping setup entirely
+- **Proactivity design guide** — New [docs/proactivity.md](docs/proactivity.md) covering the three core concepts behind proactive AI assistants: Memory Flush, Research Queue, and Periodic Heartbeat
+
 ### v0.6.3 — Project-Aware Goals & Evolution Tiers (Mar 2026)
 
 - **Project scanning** — `/hm-goal` now detects your tech stack, tests, CI, and directory structure before asking questions. Goal trees start pre-filled with what you already have
@@ -481,10 +488,12 @@ your-project/
 │       ├── eval-skill.md       # /eval-skill
 │       ├── improve-skill.md    # /improve-skill
 │       └── evolve.md           # /evolve
-└── scripts/
-    ├── observe.sh              # Observation hook
-    ├── evaluate-session.js     # Pattern extraction
-    └── prune-instincts.js      # Automatic cleanup
+└── homunculus/
+    ├── ...                     # (instincts, evolved, experiments, reports)
+    └── scripts/
+        ├── observe.sh          # Observation hook
+        ├── evaluate-session.js # Pattern extraction
+        └── prune-instincts.js  # Automatic cleanup
 ```
 
 ---
