@@ -164,6 +164,17 @@ The evolution engine then:
 
 ## What's New
 
+### v0.9.0 — Evolution Engine Upgrade (Mar 2026)
+
+- **Smart observation** — `observe.sh` now filters noise (skips Read/Glob/Grep, only records post-phase for writes) and tracks reference frequency — which instincts and skills are actually being read
+- **Three-layer extraction** — `evaluate-session.js` now extracts instincts + memory suggestions + research topics in a single pass. Memory and research are written to `homunculus/reports/` for you to review (non-invasive)
+- **Semantic dedup** — New instincts can declare `supersedes` to auto-archive older instincts they replace
+- **Write Gate** — Extraction prompt now includes quality criteria (must change future behavior, capture a commitment, or preserve a decision rationale)
+- **Dynamic daily cap** — Instinct extraction limit scales with session size (1 for short sessions, up to 5 for long ones)
+- **Smarter pruning** — `prune-instincts.js` now uses reference frequency scoring (+25 for frequently used, -15 for never referenced), 3-tier skill coverage detection (direct evolved / high overlap / partial), 14-day grace period before confidence decay, and at-risk warnings
+- **Idempotency** — Extraction tracks scan state to avoid reprocessing the same observations
+- **`--json` output** — `prune-instincts.js` supports `--json` for programmatic use
+
 ### v0.8.0 — Upgrade Mechanism (Mar 2026)
 
 - **`homunculus-code upgrade`** — New command to update managed files when you upgrade the npm package. Core scripts (observe.sh, etc.) are auto-replaced with `.bak` backup; commands and rules are only replaced if you haven't customized them — otherwise a `.new` file is written for manual merge

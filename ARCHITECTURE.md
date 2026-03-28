@@ -105,20 +105,22 @@ This routing happens at three points:
 ### Layer 1: Observation → Instincts
 
 ```
-Tool usage → observe.sh (hook) → observations.jsonl
-                                        |
-                         evaluate-session.js (SessionEnd)
-                                        |
-                                        v
-                              instincts/personal/*.md
-                              (confidence-scored patterns)
-                              (tagged: suggested_mechanism + goal_path)
+Tool usage → observe.sh (hook, noise-filtered) → observations.jsonl
+                    |                                     |
+                    |→ reference-tracking.jsonl    evaluate-session.js
+                       (which instincts/skills           |
+                        are actually read)               v
+                                              ┌── instincts/personal/*.md
+                                              │   (confidence-scored, mechanism-tagged)
+                                              ├── reports/memory-suggestions.jsonl
+                                              └── reports/research-queue.jsonl
 ```
 
 Instincts are small behavioral patterns with:
-- **Confidence scores** — increase with reinforcement, decay over time
+- **Confidence scores** — increase with reinforcement, decay over time (14-day grace period)
 - **Mechanism tag** — which implementation type fits best (hook/rule/skill/script/...)
 - **Goal path** — which goal in the tree this serves
+- **Semantic dedup** — new instincts can `supersede` older ones, auto-archiving them
 - **Automatic archival** — archived once implemented by any mechanism
 
 ### Layer 2: Implementation Routing → Multi-Mechanism Evolution

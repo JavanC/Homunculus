@@ -35,7 +35,7 @@ Each night, the agent runs a phase pipeline (phases skipped based on tier):
 | Phase | What happens |
 |-------|-------------|
 | **P0** | Complete assigned high-priority tasks |
-| **P1** | Evolution cycle — route instincts to 8 mechanisms (hook/rule/skill/script/agent/...), eval + improve skills, review workflow/subagent health, check all mechanisms working, review goal implementations |
+| **P1** | Evolution cycle — extract instincts + memory suggestions + research topics, route instincts to 8 mechanisms (hook/rule/skill/script/agent/...), eval + improve skills, review goal implementations |
 | **P2** | Research — scan tech news, changelogs, community (with cross-night dedup) |
 | **P3** | Experiments — generate hypotheses from weak goals, test in isolated worktrees |
 | **P4** | Sync — update CLAUDE.md, architecture.yaml, memory |
@@ -113,11 +113,23 @@ The nightly agent operates within safe boundaries. Changes that affect core beha
 
 The morning report includes a **Suggested actions** section for anything the agent couldn't do autonomously. Review and adopt what makes sense.
 
+## Reports Directory
+
+The evolution engine writes suggestions to `homunculus/reports/` (non-invasive — you decide what to adopt):
+
+| File | Purpose |
+|------|---------|
+| `memory-suggestions.jsonl` | Context worth preserving (user preferences, project decisions, external resources) |
+| `research-queue.jsonl` | Topics mentioned but not explored — candidates for nightly research |
+
+Review these during `/hm-night` or check them manually anytime.
+
 ## Morning Report
 
 After each run, the agent produces a structured report with:
 - Session summary (phases completed, cost, duration)
 - System evolution (instinct routing, skill evals)
+- Memory suggestions extracted from sessions
 - Research topics (with source URLs and goal relevance tags)
 - Experiments (hypothesis, result, merged or discarded)
 - Suggested actions (things that need your approval)

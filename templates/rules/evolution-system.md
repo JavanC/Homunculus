@@ -11,19 +11,22 @@
 ## Evolution Flow
 
 ```
-Observe (observations.jsonl) → Pattern detection (confidence > 0.7) → instincts/personal/*.md
-                                                                            ↓
-                                                               /evolve → evolved/skills/*.md
-                                                                            ↓
-                                                               eval → improve loop → 100% pass
+Observe (observations.jsonl) → Three-layer extraction:
+  ├── Instincts (behavioral patterns, confidence > 0.7, Write Gate)
+  │       ↓ supersedes check → auto-archive replaced instincts
+  │       ↓ /evolve → route to best mechanism (hook/rule/skill/script/agent/...)
+  │       ↓ if skill → eval → improve loop → 100% pass
+  ├── Memory suggestions → reports/memory-suggestions.jsonl (user reviews)
+  └── Research topics → reports/research-queue.jsonl (nightly agent picks up)
 ```
 
 ## Manual Triggers
-- `/evolve` — Aggregate instincts into a skill
+- `/evolve` — Route instincts to the best mechanism (skill is just one of 8)
 - `/eval-skill` — Test a skill against its eval spec
 - `/improve-skill` — Auto-improve until eval passes
 
 ## Automatic Maintenance
-- Instinct extraction from session observations
-- Instinct pruning (confidence decay, skill coverage check)
+- Three-layer extraction: instincts + memory + research from sessions
+- Semantic dedup: new instincts auto-archive superseded ones
+- Smart pruning: reference frequency + 3-tier skill coverage + confidence decay (14-day grace)
 - Skill eval → improve pipeline
