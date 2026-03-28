@@ -6,11 +6,12 @@ Every change to this repo must complete these steps in order:
 
 1. **Code changes** — implement the feature/fix
 2. **README.md** — update What's New section + any affected docs
-3. **package.json** — bump version (semver: patch/minor/major)
-4. **git commit + push** — descriptive commit message
-5. **npm publish** — `npm publish` from repo root
-6. **GitHub release** — `gh release create vX.Y.Z` with release notes
-7. **assistant plan.md** — sync `~/assistant/projects/homunculus/plan.md` if applicable
+3. **i18n sync** — update `docs/zh-TW/README.md` and `docs/zh-CN/README.md` to match
+4. **package.json** — bump version (semver: patch/minor/major)
+5. **git commit + push** — descriptive commit message
+6. **npm publish** — `npm publish` from repo root
+7. **GitHub release** — `gh release create vX.Y.Z` with release notes
+8. **assistant plan.md** — sync `~/assistant/projects/homunculus/plan.md` if applicable
 
 ## Project Structure
 
