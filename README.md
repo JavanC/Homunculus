@@ -21,7 +21,7 @@ npx homunculus-code init
 
 One command. Define your goals. Your assistant starts evolving.
 
-> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 190 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 24 automation scripts. The nightly agent made 368 autonomous commits — improving the system while the developer slept. [See results →](#real-world-results)
+> **Proof it works:** One developer ran this system for 3 weeks. It auto-generated 200 behavioral patterns, routed them into 10 tested skills, created 3 specialized agents, 15 commands, and 24 automation scripts. The nightly agent made 1,026 autonomous commits — improving the system while the developer slept. [See results →](#real-world-results)
 
 ---
 
@@ -441,7 +441,7 @@ Subscription users (Max/Team) can run `full` at no extra API cost.
 - Approve experiment: context reduction via skill splitting
 ```
 
-In our reference system, the nightly agent produced **155 autonomous commits** — routing instincts to the right mechanisms, evolving skills, running experiments, researching better approaches, and archiving outdated patterns. All without any human input.
+In our reference system, the nightly agent produced **1,026 autonomous commits** — routing instincts to the right mechanisms, evolving skills, running experiments, researching better approaches, and archiving outdated patterns. All without any human input.
 
 The nightly agent is what turns Homunculus from "a tool you use" into "a system that grows on its own."
 
@@ -456,19 +456,19 @@ Built and tested on a real personal AI assistant. In **3 weeks** (starting from 
 | What evolved | Count | Details |
 |-------------|-------|---------|
 | Goal tree | **10 goals / 46+ sub-goals** | Each with health checks and metrics |
-| Instincts | **190** | 33 active + 157 auto-archived (system prunes itself) |
-| Skills | **10** | All 100% eval pass rate (152 test scenarios) |
+| Instincts | **200** | 35 active + 165 auto-archived (system prunes itself) |
+| Skills | **10** | All 100% eval pass rate (179 test scenarios) |
 | Experiments | **15** | Structured A/B tests with pass/fail tracking |
-| Subagents | **3** | Auto-extracted from repetitive main-thread patterns |
+| Subagents | **5** | Auto-extracted from repetitive main-thread patterns |
 | Scheduled agents | **5** | Nightly heartbeat, Discord bridge, daily news, trading × 2 |
-| Hooks | **11** | Observation, compaction, quality gates |
-| Scripts | **24** | Session lifecycle, health checks, evolution reports |
-| Slash commands | **15** | Workflow automations (forge-dev, quality-gate, eval...) |
-| Rules | **6** | Core patterns, evolution system, knowledge management |
-| ADRs | **8** | Architecture decision records |
-| Total commits | **1,367+** | Mostly automated by nightly agent |
+| Hooks | **12** | Observation, compaction, quality gates |
+| Scripts | **33** | Session lifecycle, health checks, evolution reports |
+| Slash commands | **17** | Workflow automations (forge-dev, quality-gate, eval...) |
+| Rules | **7** | Core patterns, evolution system, knowledge management |
+| ADRs | **9** | Architecture decision records |
+| Total commits | **1,505+** | Mostly automated by nightly agent |
 
-The nightly agent alone: **368 autonomous commits**.
+The nightly agent alone: **1,026 autonomous commits**.
 
 The system even evolved its own task management board:
 

@@ -21,7 +21,7 @@ npx homunculus-code init
 
 一行指令。定義你的目標。你的助理開始演化。
 
-> **實證：** 一位開發者運行此系統 3 週，自動產生了 190 個行為模式，收斂為 10 個經過測試的 skill、3 個專門化 agent、15 個 command、以及 24 個自動化 script。夜間 agent 進行了 368 次自主 commit——在開發者睡覺時持續改善系統。[查看成果 →](#真實世界的成果)
+> **實證：** 一位開發者運行此系統 3 週，自動產生了 200 個行為模式，收斂為 10 個經過測試的 skill、5 個專門化 agent、17 個 command、以及 33 個自動化 script。夜間 agent 進行了 1,026 次自主 commit——在開發者睡覺時持續改善系統。[查看成果 →](#真實世界的成果)
 
 ---
 
@@ -441,7 +441,7 @@ Goal: "Catch bugs before merge"
 - Approve experiment: context reduction via skill splitting
 ```
 
-在我們的參考系統中，夜間 agent 產生了 **155 次自主 commit**——路由 instinct 到正確的機制、演化 skill、執行實驗、研究更好的方法、歸檔過時的模式。全部無需任何人為輸入。
+在我們的參考系統中，夜間 agent 產生了 **1,026 次自主 commit**——路由 instinct 到正確的機制、演化 skill、執行實驗、研究更好的方法、歸檔過時的模式。全部無需任何人為輸入。
 
 夜間 agent 是將 Homunculus 從「你使用的工具」變成「自己成長的系統」的關鍵。
 
@@ -456,19 +456,19 @@ Goal: "Catch bugs before merge"
 | 演化的產物 | 數量 | 詳細 |
 |-------------|-------|---------|
 | Goal tree | **10 個 goal / 46+ 個子目標** | 每個都有 health check 和 metrics |
-| Instinct | **190** | 33 個活躍 + 157 個自動歸檔（系統自我修剪） |
-| Skill | **10** | 全部 100% eval 通過率（152 個測試情境） |
+| Instinct | **200** | 35 個活躍 + 165 個自動歸檔（系統自我修剪） |
+| Skill | **10** | 全部 100% eval 通過率（179 個測試情境） |
 | 實驗 | **15** | 結構化 A/B 測試，含通過/失敗追蹤 |
-| Subagent | **3** | 從重複的主執行緒模式中自動提取 |
+| Subagent | **5** | 從重複的主執行緒模式中自動提取 |
 | 排程 agent | **5** | 夜間 heartbeat、Discord bridge、每日新聞、交易 × 2 |
-| Hook | **11** | 觀察、壓縮、品質門檻 |
-| Script | **24** | Session 生命週期、健康檢查、演化報告 |
-| Slash command | **15** | 工作流自動化（forge-dev、quality-gate、eval...） |
-| Rule | **6** | 核心模式、演化系統、知識管理 |
-| ADR | **8** | 架構決策記錄 |
-| 總 commit 數 | **1,367+** | 大部分由夜間 agent 自動完成 |
+| Hook | **12** | 觀察、壓縮、品質門檻 |
+| Script | **33** | Session 生命週期、健康檢查、演化報告 |
+| Slash command | **17** | 工作流自動化（forge-dev、quality-gate、eval...） |
+| Rule | **7** | 核心模式、演化系統、知識管理 |
+| ADR | **9** | 架構決策記錄 |
+| 總 commit 數 | **1,505+** | 大部分由夜間 agent 自動完成 |
 
-夜間 agent 單獨貢獻：**368 次自主 commit**。
+夜間 agent 單獨貢獻：**1,026 次自主 commit**。
 
 系統甚至演化出了自己的任務管理面板：
 
