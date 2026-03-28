@@ -10,6 +10,9 @@ switch (command) {
   case 'night':
     require('./night.js');
     break;
+  case 'upgrade':
+    require('./upgrade.js');
+    break;
   case 'help':
   case '--help':
   case '-h':
@@ -22,6 +25,7 @@ switch (command) {
     console.log('');
     console.log('  Commands:');
     console.log('    init     Set up Homunculus in your project');
+    console.log('    upgrade  Update managed files to latest version');
     console.log('    night    Run one evolution cycle (health check → evolve → report)');
     console.log('    help     Show this help message');
     console.log('');

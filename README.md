@@ -164,6 +164,11 @@ The evolution engine then:
 
 ## What's New
 
+### v0.8.0 — Upgrade Mechanism (Mar 2026)
+
+- **`homunculus-code upgrade`** — New command to update managed files when you upgrade the npm package. Core scripts (observe.sh, etc.) are auto-replaced with `.bak` backup; commands and rules are only replaced if you haven't customized them — otherwise a `.new` file is written for manual merge
+- **Install manifest** — `init` now generates `homunculus/.manifest.json` tracking SHA256 hashes of all managed files, enabling safe diff-aware upgrades
+
 ### v0.7.0 — Non-Invasive Install & Proactivity Design Guide (Mar 2026)
 
 - **Non-invasive install** — Scripts now live in `homunculus/scripts/` instead of the project root `scripts/`, avoiding collisions with existing project tooling
@@ -263,7 +268,19 @@ For new projects with no existing files, Claude falls back to general questions 
 
 Watch Claude check your goals, route instincts to the right mechanisms (hook/rule/skill/script/agent), evaluate and improve implementations, and generate a report — all in one command. This is what the nightly agent does autonomously while you sleep.
 
-### 4. Keep Using Claude Code
+### 4. Upgrade
+
+When a new version is published, update your managed files:
+
+```bash
+npx homunculus-code@latest upgrade
+```
+
+- **Core scripts** → auto-replaced (backup saved as `.bak`)
+- **Commands/rules you haven't modified** → auto-replaced
+- **Commands/rules you customized** → skipped, new version saved as `.new` for you to merge
+
+### 5. Keep Using Claude Code
 
 The observation hook watches your usage automatically. As patterns emerge, instincts are extracted and routed to the right mechanism:
 

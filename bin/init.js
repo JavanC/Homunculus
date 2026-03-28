@@ -3,11 +3,23 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const readline = require('readline');
-const TEMPLATES_DIR = path.join(__dirname, '..', 'templates');
-const CORE_DIR = path.join(__dirname, '..', 'core');
-const COMMANDS_DIR = path.join(__dirname, '..', 'commands');
+const PKG_DIR = path.join(__dirname, '..');
+const TEMPLATES_DIR = path.join(PKG_DIR, 'templates');
+const CORE_DIR = path.join(PKG_DIR, 'core');
+const COMMANDS_DIR = path.join(PKG_DIR, 'commands');
+
+const pkgVersion = require(path.join(PKG_DIR, 'package.json')).version;
+
+function sha256(filePath) {
+  const content = fs.readFileSync(filePath);
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+// Track copied files for manifest generation
+const copiedFiles = [];
 
 function ask(question) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -18,18 +30,31 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-function copyDir(src, dest) {
+function copyDir(src, dest, category, projectDir) {
   ensureDir(dest);
   if (!fs.existsSync(src)) return;
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
-      copyDir(srcPath, destPath);
+      copyDir(srcPath, destPath, category, projectDir);
     } else {
       fs.copyFileSync(srcPath, destPath);
+      copiedFiles.push({
+        dest: path.relative(projectDir, destPath),
+        hash: sha256(destPath),
+        category,
+      });
     }
   }
+}
+
+function trackFile(destPath, category, projectDir) {
+  copiedFiles.push({
+    dest: path.relative(projectDir, destPath),
+    hash: sha256(destPath),
+    category,
+  });
 }
 
 async function main() {
@@ -69,7 +94,10 @@ async function main() {
   const rulesDest = path.join(projectDir, '.claude', 'rules', 'evolution-system.md');
   if (!fs.existsSync(rulesDest) && fs.existsSync(rulesSrc)) {
     fs.copyFileSync(rulesSrc, rulesDest);
+    trackFile(rulesDest, 'rule', projectDir);
     console.log('  \x1b[32m✓\x1b[0m Added evolution rules');
+  } else if (fs.existsSync(rulesDest)) {
+    trackFile(rulesDest, 'rule', projectDir);
   }
 
   // 3. Add Homunculus section to CLAUDE.md
@@ -105,7 +133,7 @@ This project uses Homunculus for goal-driven evolution.
 
   // 4. Copy core scripts
   if (fs.existsSync(CORE_DIR)) {
-    copyDir(CORE_DIR, path.join(projectDir, 'homunculus', 'scripts'));
+    copyDir(CORE_DIR, path.join(projectDir, 'homunculus', 'scripts'), 'core', projectDir);
     console.log('  \x1b[32m✓\x1b[0m Copied evolution scripts');
   }
 
@@ -120,9 +148,11 @@ This project uses Homunculus for goal-driven evolution.
         const destFile = path.join(commandsDest, entry.name);
         if (fs.existsSync(destFile)) {
           console.log(`  \x1b[33m!\x1b[0m Skipped ${entry.name} (already exists)`);
+          trackFile(destFile, 'command', projectDir);
           commandsSkipped++;
         } else {
           fs.copyFileSync(path.join(COMMANDS_DIR, entry.name), destFile);
+          trackFile(destFile, 'command', projectDir);
           commandsCopied++;
         }
       }
@@ -180,6 +210,7 @@ This project uses Homunculus for goal-driven evolution.
     '',
     '# Homunculus runtime data',
     'homunculus/observations.jsonl*',
+    'homunculus/.manifest.json',
     'data/hook-profile*',
     'data/auto-learn-cooldown.json'
   ].join('\n');
@@ -230,6 +261,19 @@ This project uses Homunculus for goal-driven evolution.
   } else {
     console.log('  \x1b[33m-\x1b[0m evolution-config.yaml already exists');
   }
+
+  // 9. Write manifest for upgrade tracking
+  const manifestData = {
+    version: pkgVersion,
+    installed_at: new Date().toISOString(),
+    files: {},
+  };
+  for (const f of copiedFiles) {
+    manifestData.files[f.dest] = { hash: f.hash, category: f.category };
+  }
+  const manifestPath = path.join(projectDir, 'homunculus', '.manifest.json');
+  fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2) + '\n');
+  console.log('  \x1b[32m✓\x1b[0m Generated upgrade manifest');
 
   // Done
   console.log('');
