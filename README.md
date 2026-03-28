@@ -1,3 +1,5 @@
+**Language:** [English](README.md) | [繁體中文](docs/zh-TW/README.md) | [简体中文](docs/zh-CN/README.md)
+
 # Homunculus for Claude Code
 
 [![npm version](https://img.shields.io/npm/v/homunculus-code)](https://www.npmjs.com/package/homunculus-code)
