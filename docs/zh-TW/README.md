@@ -41,14 +41,14 @@ npx homunculus-code init
 **這就是差異所在：**
 
 ```
-沒有 Homunculus：                        有 Homunculus：
+Without Homunculus:                      With Homunculus:
 
-  你注意到測試一直失敗                     Goal tree 偵測到 test_pass_rate 下降
-  → 你研究測試模式                        → 夜間 agent 自動演化 tdd skill
-  → 你寫了一個 pre-commit skill           → Eval 確認 100% 通過
-  → 你手動測試                            → 早報：「已修復。以下是變更內容。」
-  → Claude 更新後又壞了                    → 下次更新？系統重新評估並適應
-  → 你又修一次...                         → 你全程在睡覺
+  You notice tests keep failing          Goal tree detects test_pass_rate dropped
+  → You research testing patterns        → Nightly agent auto-evolves tdd skill
+  → You write a pre-commit skill         → Eval confirms 100% pass
+  → You test it manually                 → Morning report: "Fixed. Here's what changed."
+  → It breaks after a Claude update      → Next update? System re-evaluates and adapts
+  → You fix it again...                  → You slept through all of this
 ```
 
 ---
@@ -59,18 +59,18 @@ npx homunculus-code init
 
 ```
 🎯 my-project
-├── code_quality — 少出 bug
-│   ├── testing — 維持測試覆蓋率
+├── code_quality — Ship fewer bugs
+│   ├── testing — Maintain test coverage
 │   │   └── realized_by: jest.config.js, tests/ (42 tests) ✓
-│   └── linting — 一致的程式碼風格
+│   └── linting — Consistent code style
 │       └── realized_by: .eslintrc.js, .prettierrc ✓
-├── speed — 加速開發
-│   └── deploy_automation — 一鍵部署
+├── speed — Move faster
+│   └── deploy_automation — One-command deploys
 │       └── realized_by: # will evolve ○
-└── knowledge — 學習與記憶
-    ├── research — 發現更好的方法
+└── knowledge — Learn and remember
+    ├── research — Discover better approaches
     │   └── realized_by: nightly agent ✓
-    └── memory — 記住重要的事
+    └── memory — Remember what matters
         └── realized_by: homunculus/instincts/ ✓
 ```
 
@@ -129,23 +129,23 @@ continuous_evolution:
 ## 如何演化
 
 ```
-          你照常使用 Claude Code
+          You use Claude Code normally
                       │
            ┌──────────┼──────────┐
            │          │          │
-        觀察      健康檢查     研究
-       (hook)    (goal tree)   (夜間)
+       Observe    Health Check   Research
+       (hooks)    (goal tree)    (nightly)
            │          │          │
            └──────────┼──────────┘
                       │
                       ▼
                ┌────────────┐
-               │   演化     │   目標不變。
-               │  ────────  │   實作越來越好。
-               │   提取     │
-               │   收斂     │
-               │   評估     │
-               │   替換     │
+               │  Evolve    │   Goals stay the same.
+               │  ────────  │   Implementations get better.
+               │  Extract   │
+               │  Converge  │
+               │  Eval      │
+               │  Replace   │
                └────────────┘
 ```
 
@@ -389,28 +389,28 @@ Goal: "Catch bugs before merge"
 訂閱用戶（Max/Team）可以無額外 API 成本執行 `full`。
 
 ```
- 你去睡覺
+ You go to sleep
         │
         ▼
  ┌─────────────────────────────────────────────┐
- │  夜間 Agent（phase pipeline）               │
+ │  Nightly Agent (phase pipeline)             │
  │                                             │
- │  1. 健康檢查（goal 狀態）                   │
+ │  1. Health check (goal status)              │
  │                                             │
- │  2. 演化循環                                │
- │    路由 instinct → 8 種機制                 │
- │    評估 + 改善實作                          │
- │    檢視：每個 goal 的最佳機制？             │
+ │  2. Evolution cycle                         │
+ │    Route instincts → 8 mechanisms           │
+ │    Eval + improve implementations           │
+ │    Review: best mechanism per goal?         │
  │                                             │
- │  3. 研究（跨夜去重）                        │
+ │  3. Research (cross-night dedup)            │
  │                                             │
- │  4. 行動（實驗 + 快速修復）                 │
+ │  4. Act (experiments + quick fixes)         │
  │                                             │
- │  5. 報告 + 同步                             │
+ │  5. Report + sync                           │
  └─────────────────────────────────────────────┘
         │
         ▼
- 你醒來迎接更聰明的助理 + 一份報告
+ You wake up to a smarter assistant + a report
 ```
 
 **以下是真實的早報範例：**

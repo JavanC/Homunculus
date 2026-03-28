@@ -41,14 +41,14 @@ npx homunculus-code init
 **关键区别在于：**
 
 ```
-没有 Homunculus：                        有了 Homunculus：
+Without Homunculus:                      With Homunculus:
 
-  你发现测试不断失败                      目标树检测到 test_pass_rate 下降
-  → 你研究测试模式                        → 夜间 agent 自动演化 tdd skill
-  → 你编写一个 pre-commit skill           → Eval 确认 100% 通过率
-  → 你手动测试它                          → 晨报：「已修复。以下是变更内容。」
-  → Claude 更新后它坏了                   → 下次更新？系统重新评估并适配
-  → 你再修一次...                         → 而你在整个过程中都在睡觉
+  You notice tests keep failing          Goal tree detects test_pass_rate dropped
+  → You research testing patterns        → Nightly agent auto-evolves tdd skill
+  → You write a pre-commit skill         → Eval confirms 100% pass
+  → You test it manually                 → Morning report: "Fixed. Here's what changed."
+  → It breaks after a Claude update      → Next update? System re-evaluates and adapts
+  → You fix it again...                  → You slept through all of this
 ```
 
 ---
@@ -59,18 +59,18 @@ npx homunculus-code init
 
 ```
 🎯 my-project
-├── code_quality — 减少 bug
-│   ├── testing — 维护测试覆盖率
+├── code_quality — Ship fewer bugs
+│   ├── testing — Maintain test coverage
 │   │   └── realized_by: jest.config.js, tests/ (42 tests) ✓
-│   └── linting — 统一代码风格
+│   └── linting — Consistent code style
 │       └── realized_by: .eslintrc.js, .prettierrc ✓
-├── speed — 更快交付
-│   └── deploy_automation — 一条命令部署
+├── speed — Move faster
+│   └── deploy_automation — One-command deploys
 │       └── realized_by: # will evolve ○
-└── knowledge — 学习与记忆
-    ├── research — 发现更好的方法
+└── knowledge — Learn and remember
+    ├── research — Discover better approaches
     │   └── realized_by: nightly agent ✓
-    └── memory — 记住重要的事
+    └── memory — Remember what matters
         └── realized_by: homunculus/instincts/ ✓
 ```
 
@@ -129,23 +129,23 @@ continuous_evolution:
 ## 进化机制
 
 ```
-          你正常使用 Claude Code
+          You use Claude Code normally
                       │
            ┌──────────┼──────────┐
            │          │          │
-        观察       健康检查      研究
-       (hook)     (目标树)     (夜间)
+       Observe    Health Check   Research
+       (hooks)    (goal tree)    (nightly)
            │          │          │
            └──────────┼──────────┘
                       │
                       ▼
                ┌────────────┐
-               │   进化     │   目标不变。
-               │  ────────  │   实现越来越好。
-               │   提取     │
-               │   汇聚     │
-               │   评估     │
-               │   替换     │
+               │  Evolve    │   Goals stay the same.
+               │  ────────  │   Implementations get better.
+               │  Extract   │
+               │  Converge  │
+               │  Eval      │
+               │  Replace   │
                └────────────┘
 ```
 
@@ -389,28 +389,28 @@ npx homunculus-code@latest upgrade
 订阅用户（Max/Team）可以运行 `full` 而无需额外 API 费用。
 
 ```
- 你去睡觉
+ You go to sleep
         │
         ▼
  ┌─────────────────────────────────────────────┐
- │  夜间 Agent（阶段流水线）                    │
+ │  Nightly Agent (phase pipeline)             │
  │                                             │
- │  1. 健康检查（目标状态）                     │
+ │  1. Health check (goal status)              │
  │                                             │
- │  2. 进化周期                                │
- │    路由 instinct → 8 种机制                  │
- │    评估 + 改进实现                           │
- │    审查：每个目标的最佳机制？                 │
+ │  2. Evolution cycle                         │
+ │    Route instincts → 8 mechanisms           │
+ │    Eval + improve implementations           │
+ │    Review: best mechanism per goal?         │
  │                                             │
- │  3. 研究（跨夜去重）                         │
+ │  3. Research (cross-night dedup)            │
  │                                             │
- │  4. 行动（实验 + 快速修复）                  │
+ │  4. Act (experiments + quick fixes)         │
  │                                             │
- │  5. 报告 + 同步                             │
+ │  5. Report + sync                           │
  └─────────────────────────────────────────────┘
         │
         ▼
- 你醒来时拥有一个更聪明的助手 + 一份报告
+ You wake up to a smarter assistant + a report
 ```
 
 **以下是真实的晨报示例：**
