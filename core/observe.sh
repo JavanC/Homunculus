@@ -3,7 +3,7 @@
 # Usage: observe.sh <pre|post> [tool_name]
 # Called by Claude Code PostToolUse hook
 #
-# v0.9.0: Added noise filtering, reference tracking, skill name enrichment
+# v0.10.0: + InstructionsLoaded noise filter, + Bash failure circuit breaker
 
 set -euo pipefail
 
@@ -50,8 +50,8 @@ case "$TOOL_NAME" in
     fi
     exit 0
     ;;
-  # Skip entirely: read-only tools provide no actionable patterns
-  Glob|Grep|TodoWrite|TodoRead)
+  # Skip entirely: read-only tools and internal events provide no actionable patterns
+  Glob|Grep|TodoWrite|TodoRead|InstructionsLoaded)
     exit 0
     ;;
   Skill)
@@ -64,6 +64,22 @@ case "$TOOL_NAME" in
   # Skip pre-phase: we only care about results (post) for write operations
   Bash|Write|Edit|NotebookEdit)
     [ "$PHASE" = "pre" ] && exit 0
+    # Circuit breaker: track consecutive Bash failures for evolution analysis
+    if [ "$TOOL_NAME" = "Bash" ] && [ -n "$INPUT" ] && command -v jq &>/dev/null; then
+      BASH_FAILURES="/tmp/homunculus-bash-failures"
+      EXIT_CODE=$(echo "$INPUT" | jq -r '.tool_result.exit_code // empty' 2>/dev/null)
+      BASH_CMD=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
+      if [ -n "$EXIT_CODE" ] && [ "$EXIT_CODE" != "0" ] && [ -n "$BASH_CMD" ]; then
+        PREFIX="${BASH_CMD:0:40}"
+        [ -f "$BASH_FAILURES" ] || echo "[]" > "$BASH_FAILURES"
+        jq -c --arg p "$PREFIX" --arg ts "$TIMESTAMP" --arg ec "$EXIT_CODE" \
+          '. + [{prefix: $p, timestamp: $ts, exit_code: $ec}] | .[-10:]' \
+          "$BASH_FAILURES" > "${BASH_FAILURES}.tmp" 2>/dev/null \
+          && mv "${BASH_FAILURES}.tmp" "$BASH_FAILURES" || true
+      elif [ -n "$EXIT_CODE" ] && [ "$EXIT_CODE" = "0" ]; then
+        echo "[]" > "$BASH_FAILURES" 2>/dev/null || true
+      fi
+    fi
     ;;
 esac
 

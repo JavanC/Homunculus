@@ -44,6 +44,10 @@ If a previously passing scenario now fails:
 - Must fix regression before continuing
 - If unable to fix, rollback to previous version
 
+## Gaming Gate
+
+If score jumps >5pp but net new lines ≤ 3 → **gaming_suspected**. Revert and add genuinely missing knowledge instead. See `/eval-skill` Gaming Gate section for details.
+
 ## Notes
 - Only modify the skill file, never the eval spec (tests stay fixed)
 - All intermediate versions tracked via git

@@ -2,7 +2,7 @@
 // evaluate-session.js — Extract instincts, memory suggestions, and research topics from sessions
 // Part of the Homunculus evolution pipeline
 //
-// v0.9.0: Three-layer extraction, dynamic daily cap, semantic dedup, Write Gate
+// v0.10.0: + Durability Gate (score < 0.7 filtered), + CLAUDE.md coverage check (avoid re-extracting implemented rules)
 //
 // Flow:
 // 1. Read observations.jsonl OR session transcript, analyze tool usage patterns
@@ -171,6 +171,29 @@ function analyzeObservations() {
 }
 
 // Read goal tree names for goal_path tagging
+// Get [MUST]/[SHOULD] rules from CLAUDE.md to avoid extracting already-implemented patterns
+function getImplementedRulesSummary() {
+  try {
+    const candidates = [
+      path.join(BASE_DIR, 'CLAUDE.md'),
+      path.join(BASE_DIR, '..', 'CLAUDE.md'),
+    ];
+    for (const p of candidates) {
+      if (!fs.existsSync(p)) continue;
+      const content = fs.readFileSync(p, 'utf8');
+      const rules = [];
+      for (const line of content.split('\n')) {
+        if (/\*\*\[MUST\]\*\*|\*\*\[SHOULD\]\*\*/.test(line)) {
+          rules.push(line.trim());
+          if (rules.length >= 25) break;
+        }
+      }
+      return rules.join('\n');
+    }
+  } catch { /* ignore */ }
+  return '';
+}
+
 function getGoalHint() {
   try {
     const archFile = path.join(BASE_DIR, 'architecture.yaml');
@@ -193,6 +216,7 @@ function extractFromSession(analysis) {
 
   const goalHint = getGoalHint();
   const existingWithTitles = getExistingInstinctsWithTitles();
+  const implementedRules = getImplementedRulesSummary();
 
   const prompt = `Analyze this Claude Code session and extract reusable behavioral patterns.
 
@@ -214,14 +238,27 @@ An observation must meet at least one criterion to become an instinct:
 
 Observations that fail all criteria → no instinct (output empty line).
 
+## Durability Gate (required field)
+Every instinct must include a **durability_score** (0.0–1.0):
+- **0.9–1.0**: Universal truths across projects/years (e.g. flock for re-entry, launchd vs cron)
+- **0.7–0.8**: Stable patterns for this system, expected valid 3–12 months
+- **0.5–0.6**: Event-specific or short-cycle patterns (OSS launch tactics, campaign rhythms) → **fails gate**
+- **0.3–0.4**: Highly context-specific to this session → not an instinct
+
+Rule: ask "will this still matter in 3 months? 6 months?" — durability_score < 0.7 → do not produce instinct.
+${implementedRules ? `
+## Already Implemented Rules (do NOT re-extract as instincts)
+The following rules are already in CLAUDE.md. Skip any instinct that duplicates these:
+${implementedRules}
+` : ''}
 ## Implementation Mechanisms (for suggested_mechanism)
 hook (deterministic, every time) | rule (path-scoped guidance) | skill (reusable knowledge with eval) | script (periodic automation) | agent (isolated context specialist) | system (infrastructure)
 
 ## Output Format
 
 ### A. Instincts (behavioral patterns)
-Find 1-2 reusable patterns (confidence > 0.7, must pass Write Gate):
-{"type": "instinct", "name": "kebab-case-name", "confidence": 0.8, "title": "Pattern title", "content": "Full instinct description", "suggested_mechanism": "hook|rule|skill|script|agent|system", "goal_path": "top_goal.sub_goal or unrooted", "supersedes": []}
+Find 1-2 reusable patterns (confidence > 0.7, must pass Write Gate and Durability Gate):
+{"type": "instinct", "name": "kebab-case-name", "confidence": 0.8, "durability_score": 0.8, "title": "Pattern title", "content": "Full instinct description", "suggested_mechanism": "hook|rule|skill|script|agent|system", "goal_path": "top_goal.sub_goal or unrooted", "supersedes": []}
 
 - supersedes: if this new pattern semantically replaces an existing instinct, list its name. Leave [] if unsure.
 
@@ -285,6 +322,12 @@ function processResult(result, { existing, todayCount, dynamicLimit }) {
       case 'instinct': {
         if (todayCount + stats.instincts >= dynamicLimit) break;
         if (!entry.name || !entry.content || (entry.confidence || 0) < 0.7) break;
+
+        // Durability gate: reject short-lived or event-specific patterns
+        if (entry.durability_score !== undefined && entry.durability_score < 0.7) {
+          log(`  Durability gate filtered: ${entry.name} (score=${entry.durability_score})`);
+          break;
+        }
 
         const name = entry.name.replace(/[^a-z0-9-]/g, '-');
         if (existing.includes(name)) {

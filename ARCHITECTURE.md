@@ -128,7 +128,7 @@ Instincts are small behavioral patterns with:
 Unlike traditional systems that only aggregate instincts into skills, Homunculus routes each instinct to its optimal mechanism:
 
 ```
-Nightly P1 B1a reads instinct tags
+Nightly P1 reads instinct tags
     |
     +-- suggested_mechanism: hook → Write hook → Archive instinct
     +-- suggested_mechanism: rule → Write rule → Archive instinct
@@ -190,14 +190,7 @@ mechanism-health-check.sh (nightly)
 ```
 scheduler → heartbeat.sh
                 |
-    P0: Assigned tasks (priority:high)
-    P1: Evolution cycle
-        A: Session review + instinct harvesting
-        B1a: Implementation Routing (instinct → best mechanism)
-        B1b: Skill eval + improve
-        B2: Workflow evolution (skip_rate analysis)
-        B3: Subagent evolution (compliance analysis)
-        C: System health (21 health_checks + mechanism review + hook candidates)
+    P1: Evolution — instinct harvest → routing → skill eval → health check
     P2: Research (cross-night dedup)
     P3: Experiments (hypothesis → verify → merge/discard)
     P4: Final sync (CLAUDE.md / MEMORY.md / architecture.yaml)

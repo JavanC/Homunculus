@@ -34,8 +34,7 @@ Each night, the agent runs a phase pipeline (phases skipped based on tier):
 
 | Phase | What happens |
 |-------|-------------|
-| **P0** | Complete assigned high-priority tasks |
-| **P1** | Evolution cycle — extract instincts + memory suggestions + research topics, route instincts to 8 mechanisms (hook/rule/skill/script/agent/...), eval + improve skills, review goal implementations |
+| **P1** | Evolution — extract instincts from today's sessions, route each to its best mechanism (hook/rule/skill/script/agent/...), eval + improve skills, health check |
 | **P2** | Research — scan tech news, changelogs, community (with cross-night dedup) |
 | **P3** | Experiments — generate hypotheses from weak goals, test in isolated worktrees |
 | **P4** | Sync — update CLAUDE.md, architecture.yaml, memory |
