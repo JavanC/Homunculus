@@ -166,6 +166,10 @@ continuous_evolution:
 
 ## 最新更新
 
+### v0.10.1 — Hook 認證 Fallback (Apr 2026)
+
+- **Hook context queue fallback** — `evaluate-session.js` 現在能優雅地處理從 CC hook 子進程呼叫時 `claude --print` 失敗的情況（Keychain/OAuth 無法存取）。失敗的提取會寫入 `homunculus/reports/extraction-queue.jsonl`，下次在 hook context 外執行時（手動呼叫或 `/hm-night`）自動消費
+
 ### v0.9.0 — Evolution Engine 升級 (Mar 2026)
 
 - **智慧觀察** — `observe.sh` 現在過濾雜訊（跳過 Read/Glob/Grep，寫入操作只記錄 post-phase）並追蹤引用頻率——哪些 instinct 和 skill 真正被讀取

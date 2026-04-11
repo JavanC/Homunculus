@@ -166,6 +166,10 @@ The evolution engine then:
 
 ## What's New
 
+### v0.10.1 — Hook Auth Fallback (Apr 2026)
+
+- **Queue fallback for hook context** — `evaluate-session.js` now gracefully handles the case where `claude --print` fails from a CC hook subprocess (Keychain/OAuth not accessible). Failed extractions are queued to `homunculus/reports/extraction-queue.jsonl` and automatically processed on the next run outside hook context (e.g. manual call or `/hm-night`)
+
 ### v0.9.0 — Evolution Engine Upgrade (Mar 2026)
 
 - **Smart observation** — `observe.sh` now filters noise (skips Read/Glob/Grep, only records post-phase for writes) and tracks reference frequency — which instincts and skills are actually being read

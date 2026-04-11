@@ -301,8 +301,59 @@ Check for topics the user mentioned but didn't dive into:
     return result;
   } catch (err) {
     log(`Extraction failed: ${err.message?.slice(0, 100)}`);
+    // When called from a CC hook subprocess, claude --print cannot access
+    // Keychain/OAuth tokens and will fail with auth errors. Queue the prompt
+    // so the next manual or scheduled run (outside hook context) can process it.
+    try {
+      ensureDir(REPORTS_DIR);
+      const queueFile = path.join(REPORTS_DIR, 'extraction-queue.jsonl');
+      const entry = JSON.stringify({ timestamp: new Date().toISOString(), prompt });
+      fs.appendFileSync(queueFile, entry + '\n');
+      log(`Queued for retry → ${queueFile} (next run outside hook context will process)`);
+    } catch {}
     return null;
   }
+}
+
+// Process any queued extraction prompts (written when called from hook context)
+function processQueue({ existing, todayCount, dynamicLimit }) {
+  const queueFile = path.join(REPORTS_DIR, 'extraction-queue.jsonl');
+  if (!fs.existsSync(queueFile)) return { instincts: 0, memory: 0, research: 0 };
+  // Still in hook context — skip, let the next run handle it
+  if (process.env.CLAUDECODE) return { instincts: 0, memory: 0, research: 0 };
+
+  const lines = fs.readFileSync(queueFile, 'utf8').trim().split('\n').filter(Boolean);
+  if (!lines.length) return { instincts: 0, memory: 0, research: 0 };
+
+  log(`Processing ${lines.length} queued extraction(s)...`);
+  const stats = { instincts: 0, memory: 0, research: 0 };
+
+  for (const line of lines) {
+    let entry;
+    try { entry = JSON.parse(line); } catch { continue; }
+    if (!entry.prompt) continue;
+
+    const env = { ...process.env };
+    delete env.CLAUDECODE;
+    const model = process.env.HOMUNCULUS_HARVEST_MODEL || 'claude-sonnet-4-6';
+    try {
+      const result = execSync(
+        `claude --print --model ${model} --max-turns 1 --no-session-persistence`,
+        { input: entry.prompt, encoding: 'utf8', timeout: 120000, env, stdio: ['pipe', 'pipe', 'pipe'] }
+      ).trim();
+      const s = processResult(result, { existing, todayCount: todayCount + stats.instincts, dynamicLimit });
+      stats.instincts += s.instincts;
+      stats.memory += s.memory;
+      stats.research += s.research;
+    } catch (err) {
+      log(`Queue entry failed: ${err.message?.slice(0, 80)}`);
+    }
+  }
+
+  // Clear processed queue
+  try { fs.unlinkSync(queueFile); } catch {}
+  log(`Queue done: ${stats.instincts} instincts, ${stats.memory} memory, ${stats.research} research`);
+  return stats;
 }
 
 // Process extraction result — parse JSON lines and route to appropriate handlers
@@ -422,13 +473,22 @@ function main() {
 
   const existing = getExistingInstincts();
 
+  // Process any prompts queued from previous hook-context runs
+  const queueStats = processQueue({ existing, todayCount, dynamicLimit });
+  const afterQueue = todayCount + queueStats.instincts;
+  if (afterQueue >= dynamicLimit) {
+    log(`Limit reached after queue processing (${afterQueue}/${dynamicLimit}), skipping current session`);
+    if (queueStats.instincts > 0) updateCooldown(afterQueue);
+    return;
+  }
+
   log(`Analyzing: ${analysis.total_observations} observations, ${analysis.frequent_tools.length} patterns (limit: ${dynamicLimit})`);
 
   const result = extractFromSession(analysis);
-  const stats = processResult(result, { existing, todayCount, dynamicLimit });
+  const stats = processResult(result, { existing, todayCount: afterQueue, dynamicLimit });
 
-  if (stats.instincts > 0) {
-    updateCooldown(todayCount + stats.instincts);
+  if (stats.instincts > 0 || queueStats.instincts > 0) {
+    updateCooldown(afterQueue + stats.instincts);
   }
 
   // Update scan state
