@@ -170,6 +170,15 @@ continuous_evolution:
 
 - **Hook context queue fallback** — `evaluate-session.js` 现在能优雅地处理从 CC hook 子进程调用时 `claude --print` 失败的情况（Keychain/OAuth 无法访问）。失败的提取会写入 `homunculus/reports/extraction-queue.jsonl`，下次在 hook context 外执行时（手动调用或 `/hm-night`）自动消费
 
+### v0.10.0 — Durability Gate & Multi-Run Eval (Apr 2026)
+
+- **Durability Gate** — `durability_score < 0.7` 的 instinct 会被过滤；事件特定模式不再污染系统
+- **Gaming Gate** — 分数跳升 >5pp 但只改了 ≤3 行的情况标记为 `gaming_suspected` 并丢弃
+- **Multi-run eval** — `--runs N` 和 `--passes N` 支持多次独立 eval + 多数决，降低 LLM 评判误差
+- **CLAUDE.md 覆盖率检查** — 已实现的规则注入提取 prompt，避免重复提取既有行为
+- **Bash 失败断路器** — `observe.sh` 追踪最近 10 次失败，用于进化分析
+- **文档简化** — 移除对外文档中的 P0/P1A/B/C 内部命名，更清晰的心智模型
+
 ### v0.9.0 — 进化引擎升级 (Mar 2026)
 
 - **智能观察** — `observe.sh` 现在过滤噪音（跳过 Read/Glob/Grep，写入操作只记录 post-phase）并追踪引用频率——哪些 instinct 和 skill 实际被读取

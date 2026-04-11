@@ -170,6 +170,15 @@ The evolution engine then:
 
 - **Queue fallback for hook context** — `evaluate-session.js` now gracefully handles the case where `claude --print` fails from a CC hook subprocess (Keychain/OAuth not accessible). Failed extractions are queued to `homunculus/reports/extraction-queue.jsonl` and automatically processed on the next run outside hook context (e.g. manual call or `/hm-night`)
 
+### v0.10.0 — Durability Gate & Multi-Run Eval (Apr 2026)
+
+- **Durability Gate** — Instincts with `durability_score < 0.7` are filtered out; event-specific patterns no longer pollute the system
+- **Gaming Gate** — Score jumps >5pp with ≤3 net new lines are flagged as `gaming_suspected` and discarded
+- **Multi-run eval** — `--runs N` and `--passes N` flags for multiple independent eval runs and majority vote per scenario, reducing LLM-judge variance
+- **CLAUDE.md coverage check** — Already-implemented rules are injected into the extraction prompt to avoid re-extracting existing behaviors
+- **Bash failure circuit breaker** — `observe.sh` tracks last 10 failures for evolution analysis
+- **Simplified phase pipeline docs** — P0/P1A/B/C internal naming removed from public docs; cleaner mental model
+
 ### v0.9.0 — Evolution Engine Upgrade (Mar 2026)
 
 - **Smart observation** — `observe.sh` now filters noise (skips Read/Glob/Grep, only records post-phase for writes) and tracks reference frequency — which instincts and skills are actually being read
