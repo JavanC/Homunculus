@@ -166,6 +166,14 @@ continuous_evolution:
 
 ## 更新日志
 
+### v0.11.0 — 跨平台进化支持 (Apr 2026)
+
+- **Cursor 支持** — `init` 自动检测 `.cursor/` 并安装 `alwaysApply: true` 的 rule（`evolution-system.mdc`），让 agent 始终具备目标意识；同时在 `.cursor/rules/` 安装操作路由 skill。Stop hook 在 session 结束时触发 instinct 提取
+- **Codex CLI 支持** — `init` 将 Homunculus 段落注入 `AGENTS.md`（相当于 CC 的 `CLAUDE.md`），包含路由表，并复制 skill 到 `.codex/`。Stop hook 同步配置
+- **平台通用 skill** — 新增 `skills/{claude,cursor,codex,generic}/` 目录，各平台自动安装对应格式；Claude Code 用户保留快速 `/hm-*` slash command
+- **`homunculus goal`** — 新 CLI 子命令：显示 `architecture.yaml` 目标树摘要，或引导首次设置
+- **`homunculus status`** — 新 CLI 子命令：进化仪表板（instinct、skill、agent、eval、最后报告）——无需打开 AI 编辑器，直接在终端查看
+
 ### v0.10.1 — Hook 认证 Fallback (Apr 2026)
 
 - **Hook context queue fallback** — `evaluate-session.js` 现在能优雅地处理从 CC hook 子进程调用时 `claude --print` 失败的情况（Keychain/OAuth 无法访问）。失败的提取会写入 `homunculus/reports/extraction-queue.jsonl`，下次在 hook context 外执行时（手动调用或 `/hm-night`）自动消费
@@ -222,17 +230,25 @@ continuous_evolution:
 
 ### 1. 安装
 
-在你的项目目录中运行（`CLAUDE.md` 或 `.claude/` 所在位置）：
+在你的项目目录中运行（`CLAUDE.md`、`.claude/`、`.cursor/` 或 `codex.json` 所在位置）：
 
 ```bash
 npx homunculus-code init
 ```
 
+`init` 自动检测你的 AI host（Claude Code、Cursor 或 Codex CLI）并安装对应配置：
+
+| Host | Rule 格式 | Skill 格式 | Stop hook |
+|------|-----------|------------|-----------|
+| **Claude Code** | `.claude/rules/evolution-system.md` | `.claude/commands/homunculus.md` | `SessionEnd` → instinct 提取 |
+| **Cursor** | `.cursor/rules/evolution-system.mdc`（`alwaysApply: true`）| `.cursor/rules/homunculus.mdc` | `stop` 事件 → instinct 提取 |
+| **Codex CLI** | 注入 `AGENTS.md` | `.codex/homunculus-skill.md` | `stop` 事件 → instinct 提取 |
+
 ```
 Homunculus — Self-evolving AI Assistant
 
 ✓ Created homunculus/ directory structure
-✓ Added evolution rules
+✓ Added evolution rules (platform: claude-code)
 ✓ Copied evolution scripts
 ✓ Added slash commands (/hm-goal, /hm-night, /hm-status)
 ✓ Configured observation hook
@@ -240,9 +256,9 @@ Homunculus — Self-evolving AI Assistant
 Done! Homunculus is installed.
 
 Next steps:
-  1. Run claude to open Claude Code
-  2. Type /hm-goal to define your goals (AI-guided)
-  3. Type /hm-night to run your first evolution cycle
+  1. 打开你的 AI 编辑器
+  2. 输入 /hm-goal（或 "define goals"）定义你的目标（AI 引导）
+  3. 输入 /hm-night（或 "run evolution"）运行第一次进化周期
 ```
 
 ### 2. 定义你的目标
@@ -306,17 +322,25 @@ npx homunculus-code@latest upgrade
 - **你未修改的命令/规则** → 自动替换
 - **你已自定义的命令/规则** → 跳过，新版本保存为 `.new` 供你手动合并
 
-### 5. 继续使用 Claude Code
+### 5. 继续使用你的 AI 编辑器
 
 观察 hook 自动监控你的使用情况。随着模式出现，instinct 被提取并路由到正确的机制：
 
 ```
-/hm-goal        定义或优化你的目标
-/hm-night       运行完整进化周期（可手动运行，但最好设为夜间 agent）
-/hm-status      查看进化进度
+/hm-goal             定义或优化你的目标（Claude Code slash command）
+/hm-night            运行完整进化周期（Claude Code slash command）
+/hm-status           查看进化进度（Claude Code slash command）
+
+"define goals"       自然语言触发（所有平台）
+"run evolution"      自然语言触发（所有平台）
+"show status"        自然语言触发（所有平台）
+
+homunculus goal      CLI：查看目标树摘要（任意终端）
+homunculus status    CLI：进化仪表板（任意终端）
+homunculus night     CLI：通过 LLM provider 运行进化周期（任意终端）
 ```
 
-`/hm-night` 执行完整的进化流水线：将 instinct 路由到最佳机制（hook/rule/skill/script/agent）、对 skill 运行 eval + improve、审查目标健康度、并生成报告。你可以随时手动运行，但真正的威力在于让它每晚自主运行。
+`/hm-night`（或 `homunculus night`）执行完整的进化流水线：将 instinct 路由到最佳机制（hook/rule/skill/script/agent）、对 skill 运行 eval + improve、审查目标健康度、并生成报告。你可以随时手动运行，但真正的威力在于让它每晚自主运行。
 
 > 第一次运行 `/hm-night` 时，它会询问你是否要设置夜间 agent 以实现自动夜间进化。
 

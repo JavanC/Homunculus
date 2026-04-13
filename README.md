@@ -6,14 +6,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-v2.1.70+-blue)](https://docs.anthropic.com/en/docs/claude-code)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org)
+[![agentskills.io](https://img.shields.io/badge/agentskills.io-compatible-purple)](https://agentskills.io)
 
-**Stop tuning your AI. Let it tune itself.**
+**Your AI assistant gets better every night — without you lifting a finger.**
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/b3ce6017-02de-44a4-a3c6-8d45765c1693" alt="Homunculus Demo — goal setup + evolution cycle in 60 seconds" width="700">
 </p>
 
-You spend hours tweaking prompts, writing rules, researching new features, configuring tools. Homunculus flips this: define your goals, and the system evolves itself — skills, agents, hooks, scripts, everything — while you focus on actual work.
+Stop tuning your AI. Let it tune itself. You spend hours tweaking prompts, writing rules, researching new features, configuring tools. Homunculus flips this: define your goals, and the system evolves itself — skills, agents, hooks, scripts, everything — while you focus on actual work.
 
 ```bash
 npx homunculus-code init
@@ -166,6 +167,14 @@ The evolution engine then:
 
 ## What's New
 
+### v0.11.0 — Cross-Platform Evolution Support (Apr 2026)
+
+- **Cursor support** — `init` now detects `.cursor/` and installs an `alwaysApply: true` rule (`evolution-system.mdc`) so the agent always has goal awareness, plus a skill file in `.cursor/rules/` for operation routing. Stop hook triggers instinct extraction at session end
+- **Codex CLI support** — `init` injects a Homunculus section into `AGENTS.md` (equivalent to `CLAUDE.md`) with a routing table, and copies a skill file to `.codex/`. Stop hook wired for session-end extraction
+- **Platform-agnostic skills** — New `skills/{claude,cursor,codex,generic}/` directory. Each platform gets the right format; Claude Code users retain fast `/hm-*` slash commands
+- **`homunculus goal`** — New CLI subcommand: shows your `architecture.yaml` goal tree summary or guides first-time setup
+- **`homunculus status`** — New CLI subcommand: evolution dashboard (instincts, skills, agents, evals, last report) — works from any terminal without opening your AI editor
+
 ### v0.10.1 — Hook Auth Fallback (Apr 2026)
 
 - **Queue fallback for hook context** — `evaluate-session.js` now gracefully handles the case where `claude --print` fails from a CC hook subprocess (Keychain/OAuth not accessible). Failed extractions are queued to `homunculus/reports/extraction-queue.jsonl` and automatically processed on the next run outside hook context (e.g. manual call or `/hm-night`)
@@ -222,17 +231,25 @@ The evolution engine then:
 
 ### 1. Install
 
-Run in your project directory (where your `CLAUDE.md` or `.claude/` lives):
+Run in your project directory (where your `CLAUDE.md`, `.claude/`, `.cursor/`, or `codex.json` lives):
 
 ```bash
 npx homunculus-code init
 ```
 
+`init` auto-detects your AI host (Claude Code, Cursor, or Codex CLI) and installs the right configuration:
+
+| Host | Rule format | Skill format | Stop hook |
+|------|------------|--------------|-----------|
+| **Claude Code** | `.claude/rules/evolution-system.md` | `.claude/commands/homunculus.md` | `SessionEnd` → instinct extraction |
+| **Cursor** | `.cursor/rules/evolution-system.mdc` (`alwaysApply: true`) | `.cursor/rules/homunculus.mdc` | `stop` event → instinct extraction |
+| **Codex CLI** | Injected into `AGENTS.md` | `.codex/homunculus-skill.md` | `stop` event → instinct extraction |
+
 ```
 Homunculus — Self-evolving AI Assistant
 
 ✓ Created homunculus/ directory structure
-✓ Added evolution rules
+✓ Added evolution rules (platform: claude-code)
 ✓ Copied evolution scripts
 ✓ Added slash commands (/hm-goal, /hm-night, /hm-status)
 ✓ Configured observation hook
@@ -240,9 +257,9 @@ Homunculus — Self-evolving AI Assistant
 Done! Homunculus is installed.
 
 Next steps:
-  1. Run claude to open Claude Code
-  2. Type /hm-goal to define your goals (AI-guided)
-  3. Type /hm-night to run your first evolution cycle
+  1. Open your AI editor
+  2. Type /hm-goal (or "define goals") to define your goals (AI-guided)
+  3. Type /hm-night (or "run evolution") to run your first evolution cycle
 ```
 
 ### 2. Define Your Goals
@@ -306,17 +323,25 @@ npx homunculus-code@latest upgrade
 - **Commands/rules you haven't modified** → auto-replaced
 - **Commands/rules you customized** → skipped, new version saved as `.new` for you to merge
 
-### 5. Keep Using Claude Code
+### 5. Keep Using Your AI Editor
 
 The observation hook watches your usage automatically. As patterns emerge, instincts are extracted and routed to the right mechanism:
 
 ```
-/hm-goal        Define or refine your goals
-/hm-night       Run a full evolution cycle (can run manually, but best set up as nightly agent)
-/hm-status      Check evolution progress
+/hm-goal             Define or refine your goals (Claude Code slash command)
+/hm-night            Run a full evolution cycle (Claude Code slash command)
+/hm-status           Check evolution progress (Claude Code slash command)
+
+"define goals"       Natural language trigger (all platforms)
+"run evolution"      Natural language trigger (all platforms)
+"show status"        Natural language trigger (all platforms)
+
+homunculus goal      CLI: view architecture.yaml goal summary (any terminal)
+homunculus status    CLI: evolution dashboard (any terminal)
+homunculus night     CLI: run evolution cycle via LLM provider (any terminal)
 ```
 
-`/hm-night` performs the complete evolution pipeline: routes instincts to the best mechanism (hook/rule/skill/script/agent), runs eval + improve on skills, reviews goal health, and generates a report. You can run it manually anytime, but the real power is letting it run autonomously every night.
+`/hm-night` (or `homunculus night`) performs the complete evolution pipeline: routes instincts to the best mechanism (hook/rule/skill/script/agent), runs eval + improve on skills, reviews goal health, and generates a report. You can run it manually anytime, but the real power is letting it run autonomously every night.
 
 > The first time you run `/hm-night`, it will ask if you want to set up the nightly agent for automatic overnight evolution.
 
@@ -502,17 +527,28 @@ The system even evolved its own task management board:
 
 ## What Makes This Different
 
-| | Homunculus | OpenClaw | Cursor Rules | Claude Memory |
-|---|---|---|---|---|
-| **Goal-driven** | Goal tree with metrics + health checks | No | No | No |
-| **Learns from usage** | Auto-observation → instincts → 8 mechanisms | Self-extending | Manual | Auto-memory |
-| **Quality control** | Eval specs + scenario tests | None | None | None |
-| **Autonomous overnight** | Nightly agent: eval + improve + research + experiment | No | No | No |
-| **Self-improving** | Eval → improve → replace loop | Partial | No | No |
-| **Meta-evolution** | Evolution mechanism evolves itself | No | No | No |
-| **Implementation agnostic** | Skills, agents, hooks, scripts, MCP, cron... | Skills only | Rules only | Memory only |
+Three philosophies, three architectures:
 
-OpenClaw is great at self-extending. Homunculus goes further: it decides *what* to improve based on goal health, *validates* improvements with evals, and does it all *autonomously* overnight. They solve different problems. OpenClaw is a power tool. Homunculus is an operating system for evolution.
+> **OpenClaw** treats an agent as *a system to be orchestrated* — 345K+ stars, 10+ channels, plugin marketplace, human decides what to improve.
+>
+> **Hermes Agent** treats an agent as *a mind to be developed* — 58K+ stars, 18+ LLM providers, auto-extracts skills from workflows, offline RL training.
+>
+> **Homunculus** treats an agent as *a partner that evolves toward your goals* — not a standalone system, but an evolution layer that makes your existing AI coding assistant measurably better over time.
+
+| | Homunculus | OpenClaw | Hermes Agent | Cursor Rules | Claude Memory |
+|---|---|---|---|---|---|
+| **Goal-driven** | Goal tree with metrics + health checks | No | No | No | No |
+| **Learns from usage** | Auto-observation → instincts → 8 mechanisms | Self-extending | Auto-extracts skills | Manual | Auto-memory |
+| **Quality control** | Eval specs + discrimination tracking | None | Offline RL only | None | None |
+| **Autonomous overnight** | Nightly agent: eval + improve + research + experiment | No | Cron only | No | No |
+| **Self-improving** | Eval → improve → replace loop | Partial | RL training (offline) | No | No |
+| **Meta-evolution** | Evolution mechanism evolves itself | No | No | No | No |
+| **Implementation agnostic** | Skills, agents, hooks, scripts, MCP, cron... | Skills only | Skills only | Rules only | Memory only |
+| **Runtime quality gate** | 100% pass rate + discrimination tracking | None | None (offline RL) | None | None |
+
+**The key difference from Hermes:** Hermes improves through offline RL training — the model gets better over time via exported trajectories. Homunculus improves *runtime behavior* — the skills, hooks, and agents running today get tested, validated, and replaced tonight. No training cycle. No waiting.
+
+**The key difference from OpenClaw:** OpenClaw can extend itself, but you still decide what to improve and whether it worked. Homunculus closes the loop: goal health detects *what* needs improving, evals validate *whether* it worked, and the nightly agent does it *without you*.
 
 ---
 
@@ -580,6 +616,40 @@ Tracked via five metrics:
 
 ---
 
+## Multi-LLM Provider
+
+By default, Homunculus uses `claude --print` for instinct extraction (requires Claude CLI login). You can switch to any of the following providers:
+
+| Provider | Env Vars | Notes |
+|----------|----------|-------|
+| `claude-cli` *(default)* | `HOMUNCULUS_HARVEST_MODEL` | Requires Claude CLI login |
+| `codex-cli` | `HOMUNCULUS_HARVEST_MODEL` | Requires [Codex CLI](https://github.com/openai/codex) login |
+| `anthropic-api` | `ANTHROPIC_API_KEY`, `HOMUNCULUS_HARVEST_MODEL` | Direct API — no CLI needed |
+| `openai-api` | `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `HOMUNCULUS_HARVEST_MODEL` | Also works with Ollama, vLLM, OpenRouter |
+
+```bash
+# Use Anthropic API directly (no Claude CLI required)
+export HOMUNCULUS_HARVEST_PROVIDER=anthropic-api
+export ANTHROPIC_API_KEY=sk-ant-...
+
+# Use OpenAI
+export HOMUNCULUS_HARVEST_PROVIDER=openai-api
+export OPENAI_API_KEY=sk-...
+export HOMUNCULUS_HARVEST_MODEL=gpt-4o
+
+# Use Ollama (local, free)
+export HOMUNCULUS_HARVEST_PROVIDER=openai-api
+export OPENAI_API_KEY=ollama
+export OPENAI_BASE_URL=http://localhost:11434
+export HOMUNCULUS_HARVEST_MODEL=llama3.2
+
+# Use Codex CLI
+export HOMUNCULUS_HARVEST_PROVIDER=codex-cli
+export HOMUNCULUS_HARVEST_MODEL=o4-mini
+```
+
+---
+
 ## FAQ
 
 <details>
@@ -610,6 +680,16 @@ Claude's memory records facts. Homunculus evolves *behavior* — tested skills, 
 <summary><strong>How does this compare to OpenClaw?</strong></summary>
 
 OpenClaw is excellent at self-extending. Homunculus solves a different problem: autonomous, goal-directed evolution. It decides what needs improving (via goal health), validates improvements (via evals), and does the work overnight (via the nightly agent). You could use both: OpenClaw for on-demand capability extension, Homunculus for the autonomous evolution layer on top.
+</details>
+
+<details>
+<summary><strong>How does this compare to Hermes Agent?</strong></summary>
+
+Hermes Agent (NousResearch) is a standalone AI assistant that improves through offline RL training — it exports conversation trajectories to the Atropos framework, which trains the model to get better over time. That's powerful, but it's a different tool for a different problem.
+
+Homunculus isn't a standalone assistant — it's an evolution layer for the AI coding assistant you already use (Claude Code, and soon Cursor/Codex). Instead of training a model, it evolves the *runtime behaviors*: the skills, hooks, and agents active in your sessions right now. Each behavior is eval-tested before it ships and tracked for discrimination (does having this skill actually change outcomes?).
+
+The skill format is [agentskills.io](https://agentskills.io) compatible, so skills that evolve in Homunculus can be shared with the broader ecosystem.
 </details>
 
 <details>
@@ -646,6 +726,7 @@ Homunculus builds on ideas from several projects and research:
 
 - **[everything-claude-code](https://github.com/affaan-m/everything-claude-code)** — Continuous Learning pattern and Skill Creator's eval → improve loop. Homunculus adopted and extended these into a goal-tree-driven, autonomous evolution system.
 - **[OpenClaw](https://github.com/openclaw/openclaw)** — Demonstrated that AI assistants can extend their own capabilities. Homunculus adds goal direction, eval quality gates, and autonomous overnight operation.
+- **[Hermes Agent](https://github.com/NousResearch/hermes-agent)** — Validated the "agent that grows with you" positioning and the agentskills.io standard. Homunculus differs by evolving runtime behavior (not model weights) with measurable eval quality gates.
 - **[Karpathy's Autoresearch](https://x.com/karpathy)** — Proved AI can run autonomous experiment loops (118 iterations, 12+ hours). Inspired the nightly agent's research cycle.
 - **[Anthropic's Eval Research](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents)** — Eval methodology, noise tolerance (±6pp), and pass@k / pass^k metrics.
 
