@@ -12,6 +12,45 @@ const CORE_DIR = path.join(PKG_DIR, 'core');
 const COMMANDS_DIR = path.join(PKG_DIR, 'commands');
 
 const pkgVersion = require(path.join(PKG_DIR, 'package.json')).version;
+const STARTER_PACK_DIR = path.join(PKG_DIR, 'starter-pack');
+const { detectHarness, getAdapter } = require(path.join(PKG_DIR, 'core', 'adapters'));
+
+// Detect project language/framework from filesystem signals
+function detectProjectStack(projectDir) {
+  const stacks = [];
+  if (fs.existsSync(path.join(projectDir, 'package.json'))) stacks.push('javascript');
+  if (fs.existsSync(path.join(projectDir, 'go.mod'))) stacks.push('go');
+  if (fs.existsSync(path.join(projectDir, 'Cargo.toml'))) stacks.push('rust');
+  if (fs.existsSync(path.join(projectDir, 'pyproject.toml')) ||
+      fs.existsSync(path.join(projectDir, 'setup.py')) ||
+      fs.existsSync(path.join(projectDir, 'requirements.txt'))) stacks.push('python');
+  return stacks;
+}
+
+// Install starter pack instincts into the project
+function installStarterPack(projectDir, stacks) {
+  const instinctsDir = path.join(projectDir, 'homunculus', 'instincts', 'personal');
+  ensureDir(instinctsDir);
+
+  // Always install universal instincts
+  const folders = ['universal', ...stacks];
+  let installed = 0;
+
+  for (const folder of folders) {
+    const src = path.join(STARTER_PACK_DIR, folder);
+    if (!fs.existsSync(src)) continue;
+    for (const entry of fs.readdirSync(src)) {
+      if (!entry.endsWith('.md')) continue;
+      const destPath = path.join(instinctsDir, entry);
+      if (!fs.existsSync(destPath)) {
+        fs.copyFileSync(path.join(src, entry), destPath);
+        installed++;
+      }
+    }
+  }
+
+  return { installed, stacks };
+}
 
 function sha256(filePath) {
   const content = fs.readFileSync(filePath);
@@ -58,6 +97,8 @@ function trackFile(destPath, category, projectDir) {
 }
 
 async function main() {
+  const skipStarterPack = process.argv.includes('--no-starter-pack');
+
   console.log('');
   console.log('  \x1b[1mHomunculus\x1b[0m — Self-evolving AI Assistant');
   console.log('');
@@ -70,6 +111,13 @@ async function main() {
     console.log('');
   }
 
+  // 0. Detect host harness and get adapter
+  const harness = detectHarness(projectDir);
+  const adapter = getAdapter(harness);
+  const harnessLabels = { 'claude-code': 'Claude Code', 'cursor': 'Cursor', 'codex': 'Codex CLI' };
+  console.log(`  \x1b[2mDetected harness: ${harnessLabels[harness] || harness}\x1b[0m`);
+  console.log('');
+
   // 1. Create directory structure
   const dirs = [
     'homunculus/instincts/personal',
@@ -80,27 +128,59 @@ async function main() {
     'homunculus/experiments',
     'homunculus/reports',
     'homunculus/scripts',
-    '.claude/rules',
-    '.claude/commands'
   ];
+
+  // Add harness-specific config/rules dirs
+  const configDirRel = path.relative(projectDir, adapter.configDir(projectDir));
+  const rulesDirRel  = path.relative(projectDir, adapter.rulesDir(projectDir));
+  if (!dirs.includes(configDirRel)) dirs.push(configDirRel);
+  if (!dirs.includes(rulesDirRel))  dirs.push(rulesDirRel);
+  // Claude Code also needs commands dir
+  if (harness === 'claude-code') dirs.push('.claude/commands');
 
   for (const dir of dirs) {
     ensureDir(path.join(projectDir, dir));
   }
   console.log('  \x1b[32m✓\x1b[0m Created homunculus/ directory structure');
 
-  // 2. Copy evolution rules
-  const rulesSrc = path.join(TEMPLATES_DIR, 'rules', 'evolution-system.md');
-  const rulesDest = path.join(projectDir, '.claude', 'rules', 'evolution-system.md');
-  if (!fs.existsSync(rulesDest) && fs.existsSync(rulesSrc)) {
-    fs.copyFileSync(rulesSrc, rulesDest);
-    trackFile(rulesDest, 'rule', projectDir);
-    console.log('  \x1b[32m✓\x1b[0m Added evolution rules');
-  } else if (fs.existsSync(rulesDest)) {
-    trackFile(rulesDest, 'rule', projectDir);
+  // 2. Install starter pack (contextual, based on project stack)
+  if (!skipStarterPack && fs.existsSync(STARTER_PACK_DIR)) {
+    const stacks = detectProjectStack(projectDir);
+    const { installed } = installStarterPack(projectDir, stacks);
+    if (installed > 0) {
+      const stackLabel = stacks.length > 0 ? ` (${stacks.join(', ')})` : '';
+      console.log(`  \x1b[32m✓\x1b[0m Installed ${installed} starter instincts${stackLabel}`);
+      console.log(`  \x1b[2m    These are starter patterns (confidence: 0.6). The system will`);
+      console.log(`  \x1b[2m    validate and strengthen them as it observes your real usage.\x1b[0m`);
+    } else {
+      console.log('  \x1b[33m-\x1b[0m Starter instincts already present');
+    }
+  } else if (skipStarterPack) {
+    console.log('  \x1b[33m-\x1b[0m Skipped starter pack (--no-starter-pack)');
   }
 
-  // 3. Add Homunculus section to CLAUDE.md
+  // 4. Install evolution rule (harness-aware: .claude/rules/, .cursor/rules/, or AGENTS.md)
+  const { installRules: installRulesFn, installSkill: installSkillFn } = require(path.join(PKG_DIR, 'core', 'adapters'));
+  const rulesResult = installRulesFn(projectDir, TEMPLATES_DIR, harness);
+  if (rulesResult.installed) {
+    trackFile(rulesResult.path, 'rule', projectDir);
+    console.log('  \x1b[32m✓\x1b[0m Added evolution rules');
+  } else if (fs.existsSync(rulesResult.path)) {
+    trackFile(rulesResult.path, 'rule', projectDir);
+    console.log('  \x1b[33m-\x1b[0m Evolution rules already present');
+  }
+
+  // 4b. Install Homunculus skill (harness-aware: .claude/commands/, .cursor/rules/, or .codex/)
+  const SKILLS_DIR = path.join(PKG_DIR, 'skills');
+  if (fs.existsSync(SKILLS_DIR)) {
+    const skillResult = installSkillFn(projectDir, SKILLS_DIR, harness);
+    if (skillResult.installed) {
+      trackFile(skillResult.path, 'skill', projectDir);
+      console.log('  \x1b[32m✓\x1b[0m Added Homunculus skill');
+    }
+  }
+
+  // 5. Add Homunculus section to CLAUDE.md
   const claudeDest = path.join(projectDir, 'CLAUDE.md');
   const homunculusSection = `
 ## Homunculus — Self-Evolving AI Assistant
@@ -165,42 +245,66 @@ This project uses Homunculus for goal-driven evolution.
     }
   }
 
-  // 6. Configure Claude Code hooks
-  const settingsPath = path.join(projectDir, '.claude', 'settings.json');
-  let settings = {};
-  if (fs.existsSync(settingsPath)) {
-    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
-  }
-
-  if (!settings.hooks) settings.hooks = {};
-
+  // 6. Configure observation hooks (harness-aware)
   const observeCommand = "bash homunculus/scripts/observe.sh post";
-  const observeEntry = {
-    matcher: "",
-    hooks: [{
-      type: "command",
-      command: observeCommand
-    }]
-  };
+  const hooksCfg = adapter.hooksConfig(projectDir, observeCommand);
 
-  if (!settings.hooks.PostToolUse) {
-    // No PostToolUse hooks yet — create fresh array
-    settings.hooks.PostToolUse = [observeEntry];
-    ensureDir(path.join(projectDir, '.claude'));
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-    console.log('  \x1b[32m✓\x1b[0m Configured observation hook');
-  } else {
-    // PostToolUse array already exists — merge if observe.sh not already present
-    const alreadyPresent = settings.hooks.PostToolUse.some(entry =>
-      Array.isArray(entry.hooks) && entry.hooks.some(h => h.command && h.command.includes('observe.sh'))
-    );
-    if (!alreadyPresent) {
-      settings.hooks.PostToolUse.push(observeEntry);
-      ensureDir(path.join(projectDir, '.claude'));
-      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
-      console.log('  \x1b[32m✓\x1b[0m Merged observation hook into existing PostToolUse hooks');
+  ensureDir(path.dirname(hooksCfg.settingsPath));
+
+  if (harness === 'claude-code') {
+    // Claude Code: merge into .claude/settings.json under hooks.PostToolUse
+    let settings = {};
+    if (fs.existsSync(hooksCfg.settingsPath)) {
+      try { settings = JSON.parse(fs.readFileSync(hooksCfg.settingsPath, 'utf8')); } catch {}
+    }
+    if (!settings.hooks) settings.hooks = {};
+    const eventKey = hooksCfg.hookEventKey;  // 'PostToolUse'
+    if (!settings.hooks[eventKey]) {
+      settings.hooks[eventKey] = [hooksCfg.hookEntry];
+      fs.writeFileSync(hooksCfg.settingsPath, JSON.stringify(settings, null, 2) + '\n');
+      console.log('  \x1b[32m✓\x1b[0m Configured observation hook');
     } else {
-      console.log('  \x1b[33m-\x1b[0m Observation hook already present in PostToolUse');
+      const alreadyPresent = hooksCfg.alreadyPresentCheck(settings.hooks[eventKey]);
+      if (!alreadyPresent) {
+        settings.hooks[eventKey].push(hooksCfg.hookEntry);
+        fs.writeFileSync(hooksCfg.settingsPath, JSON.stringify(settings, null, 2) + '\n');
+        console.log('  \x1b[32m✓\x1b[0m Merged observation hook into existing PostToolUse hooks');
+      } else {
+        console.log('  \x1b[33m-\x1b[0m Observation hook already present in PostToolUse');
+      }
+    }
+  } else {
+    // Cursor / Codex: write hooks.json or codex.json with array of hook entries
+    let existing = [];
+    if (fs.existsSync(hooksCfg.settingsPath)) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(hooksCfg.settingsPath, 'utf8'));
+        // Cursor/Codex: hooks may be top-level array or nested under "hooks" key
+        existing = hooksCfg.hookEventKey ? (raw[hooksCfg.hookEventKey] || []) : (Array.isArray(raw) ? raw : []);
+      } catch {}
+    }
+
+    const alreadyPresent = hooksCfg.alreadyPresentCheck(existing);
+    if (!alreadyPresent) {
+      const entries = [hooksCfg.hookEntry, ...(hooksCfg.extraHookEntries || [])];
+      const merged = [...existing, ...entries];
+      let output;
+      if (hooksCfg.hookEventKey) {
+        // Merge into existing file object
+        let fileObj = {};
+        if (fs.existsSync(hooksCfg.settingsPath)) {
+          try { fileObj = JSON.parse(fs.readFileSync(hooksCfg.settingsPath, 'utf8')); } catch {}
+        }
+        fileObj[hooksCfg.hookEventKey] = merged;
+        output = JSON.stringify(fileObj, null, 2) + '\n';
+      } else {
+        // Top-level array format (Cursor hooks.json)
+        output = JSON.stringify(merged, null, 2) + '\n';
+      }
+      fs.writeFileSync(hooksCfg.settingsPath, output);
+      console.log(`  \x1b[32m✓\x1b[0m Configured observation hooks (${harnessLabels[harness]})`);
+    } else {
+      console.log(`  \x1b[33m-\x1b[0m Observation hooks already present (${harnessLabels[harness]})`);
     }
   }
 
@@ -276,11 +380,12 @@ This project uses Homunculus for goal-driven evolution.
   console.log('  \x1b[32m✓\x1b[0m Generated upgrade manifest');
 
   // Done
+  const harnessOpenCmd = harness === 'cursor' ? 'cursor .' : harness === 'codex' ? 'codex' : 'claude';
   console.log('');
   console.log('  \x1b[1m\x1b[32mDone!\x1b[0m Homunculus is installed.');
   console.log('');
   console.log('  Next steps:');
-  console.log('    1. Run \x1b[1mclaude\x1b[0m to open Claude Code');
+  console.log(`    1. Run \x1b[1m${harnessOpenCmd}\x1b[0m to open ${harnessLabels[harness] || harness}`);
   console.log('    2. Type \x1b[1m/hm-goal\x1b[0m to define your goals (AI-guided)');
   console.log('    3. Type \x1b[1m/hm-night\x1b[0m to run your first evolution cycle');
   console.log('');

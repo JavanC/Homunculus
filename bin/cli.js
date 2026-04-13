@@ -10,8 +10,20 @@ switch (command) {
   case 'night':
     require('./night.js');
     break;
+  case 'goal':
+    require('./goal.js');
+    break;
+  case 'status':
+    require('./status.js');
+    break;
   case 'upgrade':
     require('./upgrade.js');
+    break;
+  case 'tour':
+    require('./tour.js');
+    break;
+  case 'report':
+    require('./report.js');
     break;
   case 'help':
   case '--help':
@@ -25,8 +37,12 @@ switch (command) {
     console.log('');
     console.log('  Commands:');
     console.log('    init     Set up Homunculus in your project');
+    console.log('    tour     Interactive walkthrough of how Homunculus works');
+    console.log('    report   Show evolution report (--share for anonymized version)');
     console.log('    upgrade  Update managed files to latest version');
     console.log('    night    Run one evolution cycle (health check → evolve → report)');
+    console.log('    goal     View or define your project goal tree');
+    console.log('    status   Show evolution system status dashboard');
     console.log('    help     Show this help message');
     console.log('');
     console.log('  After init, use Claude Code normally. Evolution happens automatically.');

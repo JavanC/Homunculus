@@ -1,0 +1,52 @@
+---
+description: Homunculus self-evolving AI assistant system. Always loaded to give the AI goal awareness, evolution context, and routing for evolution commands.
+globs: []
+alwaysApply: true
+---
+
+# Evolution System (Homunculus)
+
+## Evolution Artifacts (all in `homunculus/evolved/`)
+
+| Artifact | Location | Evolution Method |
+|----------|----------|-----------------|
+| **Skills** | `evolved/skills/` | Instinct aggregation (`hm-night`), eval→improve loop |
+| **Agents** | `evolved/agents/` | Extract repetitive main-thread patterns into subagents |
+| **Evals** | `evolved/evals/` | Accompany each skill, scenario-based testing |
+
+## Evolution Flow
+
+```
+Observe (observations.jsonl) → Three-layer extraction:
+  ├── Instincts (behavioral patterns, confidence > 0.7, Write Gate)
+  │       ↓ supersedes check → auto-archive replaced instincts
+  │       ↓ run evolution → route to best mechanism (hook/rule/skill/script/agent/...)
+  │       ↓ if skill → eval → improve loop → 100% pass
+  ├── Memory suggestions → reports/memory-suggestions.jsonl (user reviews)
+  └── Research topics → reports/research-queue.jsonl (nightly agent picks up)
+```
+
+## Triggers (say these to run evolution workflows)
+
+| User says | Action |
+|-----------|--------|
+| "run evolution" / "nightly cycle" / "hm-night" | Follow `homunculus/commands/hm-night.md` |
+| "define goals" / "goal tree" / "hm-goal" | Follow `homunculus/commands/hm-goal.md` |
+| "system status" / "hm-status" | Follow `homunculus/commands/hm-status.md` |
+| "evolve skill" / "aggregate instincts" | Follow `homunculus/commands/evolve.md` |
+| "eval skill" / "test skill" | Follow `homunculus/commands/eval-skill.md` |
+| "improve skill" | Follow `homunculus/commands/improve-skill.md` |
+
+## Automatic Maintenance
+- Three-layer extraction: instincts + memory + research from sessions
+- Semantic dedup: new instincts auto-archive superseded ones
+- Smart pruning: reference frequency + 3-tier skill coverage + confidence decay (14-day grace)
+- Skill eval → improve pipeline
+
+## Key Paths
+- `architecture.yaml` — goal tree (read this to understand project goals)
+- `evolution-config.yaml` — tier/schedule/budget config
+- `homunculus/instincts/personal/` — auto-extracted behavioral patterns
+- `homunculus/evolved/skills/` — tested, versioned knowledge
+- `homunculus/observations.jsonl` — tool usage data
+- `homunculus/commands/` — detailed workflow instructions
