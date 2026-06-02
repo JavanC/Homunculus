@@ -167,6 +167,10 @@ The evolution engine then:
 
 ## What's New
 
+### v0.12.1 — ESM Host Compatibility Fix (Jun 2026)
+
+- **CommonJS runtime marker** — Homunculus now ships `homunculus/scripts/package.json` with `{ "type": "commonjs" }`, so runtime scripts keep working inside host projects that use `"type": "module"`
+
 ### v0.12.0 — Subscription-Aware Evolution Profiles (Jun 2026)
 
 - **Plan-aware init** — `init --plan pro|max5x|max20x|api` now creates a matching `evolution-config.yaml` and `homunculus/budget-profile.json`

@@ -166,6 +166,10 @@ continuous_evolution:
 
 ## 最新更新
 
+### v0.12.1 — ESM Host 相容性修正 (Jun 2026)
+
+- **CommonJS runtime marker** — Homunculus 現在會安裝 `homunculus/scripts/package.json`，內容為 `{ "type": "commonjs" }`，讓 runtime scripts 在 host project 使用 `"type": "module"` 時仍可正常執行
+
 ### v0.12.0 — 訂閱用量感知演化設定 (Jun 2026)
 
 - **Plan-aware init** — `init --plan pro|max5x|max20x|api` 會產生對應的 `evolution-config.yaml` 與 `homunculus/budget-profile.json`
