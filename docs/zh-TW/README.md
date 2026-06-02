@@ -166,6 +166,14 @@ continuous_evolution:
 
 ## 最新更新
 
+### v0.12.0 — 訂閱用量感知演化設定 (Jun 2026)
+
+- **Plan-aware init** — `init --plan pro|max5x|max20x|api` 會產生對應的 `evolution-config.yaml` 與 `homunculus/budget-profile.json`
+- **Pro 安全預設** — $20 Pro 預設只跑最小夜間演化：instinct 收割、路由、同步；每日研究/實驗預設關閉
+- **Max 5x 預設** — $100 Max 預設跑有界限的每日演化：1-2 個研究主題、1 個實驗、不開無上限 bonus loop
+- **Quota-first status/night** — `status` 和 `night` 會讀 usage cache，將 budget 分成 `full`、`half`、`skip`、`mp_empty`
+- **訂閱計量模型** — 文件改以 5 小時 session 用量與 weekly 用量為主，不依賴不一定存在的 dollar cost 欄位
+
 ### v0.11.0 — 跨平台演化支援 (Apr 2026)
 
 - **Cursor 支援** — `init` 自動偵測 `.cursor/` 並安裝 `alwaysApply: true` 的 rule（`evolution-system.mdc`），讓 agent 始終具備目標意識；同時在 `.cursor/rules/` 安裝操作路由 skill。Stop hook 在 session 結束時觸發 instinct 提取
@@ -234,6 +242,15 @@ continuous_evolution:
 
 ```bash
 npx homunculus-code init
+```
+
+如果已經知道你的訂閱方案，可以直接指定 profile：
+
+```bash
+npx homunculus-code init --plan pro     # $20 Pro：最小夜間演化
+npx homunculus-code init --plan max5x   # $100 Max：有界限的每日演化
+npx homunculus-code init --plan max20x  # $200 Max：完整演化，限制平行 agent
+npx homunculus-code init --plan api     # API/PAYG：用外部成本上限控管
 ```
 
 `init` 自動偵測你的 AI host（Claude Code、Cursor 或 Codex CLI）並安裝對應設定：
@@ -403,9 +420,27 @@ Goal: "Catch bugs before merge"
 
 你也可以隨時手動執行 `/hm-night` 來觸發一次循環。
 
+### 訂閱 Profile
+
+Homunculus 在 `init` 時會建立兩個設定檔：
+
+- `evolution-config.yaml` — 控制哪些 phase 值得執行
+- `homunculus/budget-profile.json` — 控制你的方案用量 guardrail
+
+建議預設：
+
+| 方案 | 月費 | 演化層級 | 每日研究 | 每日實驗 | 平行 agent | Opus 策略 |
+|------|------|----------|----------|----------|------------|-----------|
+| Pro | $20 | minimal | 關閉 | 關閉 | 1 | Claude Code 不可用 |
+| Max 5x | $100 | standard | 1-2 個主題 | 每晚 1 個 | 1 | 手動使用 |
+| Max 20x | $200 | full | 3-5 個主題 | 每晚 3 個 | 最多 3 | 只用於 planning/review |
+| API/PAYG | 變動 | standard | 2 個主題 | 每晚 1 個 | 2 | 由外部成本上限控管 |
+
+Claude Code 訂閱用量會與 Claude.ai / Claude Desktop 共用。訂閱用戶最重要的指標是 **5 小時 session 用量**與 **weekly 用量**；dollar cost 欄位不一定存在。
+
 ### 演化層級
 
-透過 `evolution-config.yaml`（`init` 時建立）控制你的助理每晚演化的深度：
+透過 `evolution-config.yaml` 控制你的助理每晚演化的深度：
 
 | | Minimal | Standard | Full |
 |---|---------|----------|------|
@@ -423,7 +458,7 @@ Goal: "Catch bugs before merge"
 # 編輯 evolution-config.yaml → tier: minimal | standard | full
 ```
 
-訂閱用戶（Max/Team）可以無額外 API 成本執行 `full`。
+訂閱用戶只有在方案仍有足夠 quota 時才建議使用 `full`。如果有 usage cache，`homunculus-code status` 會顯示目前 budget level。
 
 ```
  You go to sleep

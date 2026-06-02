@@ -167,6 +167,14 @@ The evolution engine then:
 
 ## What's New
 
+### v0.12.0 — Subscription-Aware Evolution Profiles (Jun 2026)
+
+- **Plan-aware init** — `init --plan pro|max5x|max20x|api` now creates a matching `evolution-config.yaml` and `homunculus/budget-profile.json`
+- **Pro-safe defaults** — the $20 Pro profile keeps nightly work minimal: instinct harvest, routing, sync, and no daily research/experiments by default
+- **Max 5x defaults** — the $100 Max profile runs bounded daily evolution: 1-2 research topics, 1 experiment, no unbounded bonus loop
+- **Quota-first status/night** — `status` and `night` read usage cache data when available and classify budget as `full`, `half`, `skip`, or `mp_empty`
+- **Subscription metering model** — docs now recommend tracking 5-hour session utilization and weekly utilization instead of relying on dollar cost fields
+
 ### v0.11.0 — Cross-Platform Evolution Support (Apr 2026)
 
 - **Cursor support** — `init` now detects `.cursor/` and installs an `alwaysApply: true` rule (`evolution-system.mdc`) so the agent always has goal awareness, plus a skill file in `.cursor/rules/` for operation routing. Stop hook triggers instinct extraction at session end
@@ -235,6 +243,15 @@ Run in your project directory (where your `CLAUDE.md`, `.claude/`, `.cursor/`, o
 
 ```bash
 npx homunculus-code init
+```
+
+Choose a subscription profile up front if you already know your plan:
+
+```bash
+npx homunculus-code init --plan pro     # $20 Pro: minimal nightly evolution
+npx homunculus-code init --plan max5x   # $100 Max: bounded daily evolution
+npx homunculus-code init --plan max20x  # $200 Max: full evolution, bounded parallelism
+npx homunculus-code init --plan api     # API/PAYG: use external spend caps
 ```
 
 `init` auto-detects your AI host (Claude Code, Cursor, or Codex CLI) and installs the right configuration:
@@ -404,9 +421,27 @@ This is what makes the system truly autonomous. The nightly agent runs `/hm-nigh
 
 You can also run `/hm-night` manually anytime to trigger a cycle on demand.
 
+### Subscription Profiles
+
+Homunculus creates two configuration files during `init`:
+
+- `evolution-config.yaml` — which phases are worth running
+- `homunculus/budget-profile.json` — quota guardrails for your plan
+
+Recommended defaults:
+
+| Plan | Monthly price | Evolution tier | Daily research | Daily experiments | Parallel agents | Opus policy |
+|------|---------------|----------------|----------------|-------------------|-----------------|-------------|
+| Pro | $20 | minimal | off | off | 1 | unavailable in Claude Code |
+| Max 5x | $100 | standard | 1-2 topics | 1/night | 1 | manual only |
+| Max 20x | $200 | full | 3-5 topics | 3/night | 3 max | planning/review only |
+| API/PAYG | variable | standard | 2 topics | 1/night | 2 | external spend cap |
+
+Claude Code subscription usage is shared with Claude.ai and Claude Desktop. For subscription users, the key metrics are **5-hour session utilization** and **weekly utilization**. Dollar cost fields may be unavailable.
+
 ### Evolution Tiers
 
-Control how deeply your assistant evolves each night via `evolution-config.yaml` (created during `init`):
+Control how deeply your assistant evolves each night via `evolution-config.yaml`:
 
 | | Minimal | Standard | Full |
 |---|---------|----------|------|
@@ -424,7 +459,7 @@ Weekly deep mode (configurable day) adds: full skill re-eval, goal tree mechanis
 # Edit evolution-config.yaml → tier: minimal | standard | full
 ```
 
-Subscription users (Max/Team) can run `full` at no extra API cost.
+Subscription users should choose `full` only when their plan has enough quota headroom. `homunculus-code status` reports the current budget level when usage cache data is available.
 
 ```
  You go to sleep

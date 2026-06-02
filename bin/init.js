@@ -14,6 +14,106 @@ const COMMANDS_DIR = path.join(PKG_DIR, 'commands');
 const pkgVersion = require(path.join(PKG_DIR, 'package.json')).version;
 const STARTER_PACK_DIR = path.join(PKG_DIR, 'starter-pack');
 const { detectHarness, getAdapter } = require(path.join(PKG_DIR, 'core', 'adapters'));
+const { profileForPlan } = require(path.join(PKG_DIR, 'core', 'budget'));
+
+function argValue(name) {
+  const eq = process.argv.find(a => a.startsWith(`${name}=`));
+  if (eq) return eq.slice(name.length + 1);
+  const idx = process.argv.indexOf(name);
+  if (idx !== -1) return process.argv[idx + 1];
+  return null;
+}
+
+function validPlan(plan) {
+  return ['pro', 'max5x', 'max20x', 'api'].includes(plan);
+}
+
+function planDefaults(plan) {
+  switch (plan) {
+    case 'pro':
+      return {
+        tier: 'minimal',
+        research: false,
+        experiments: false,
+        bonus: false,
+        topicsMin: 0,
+        topicsMax: 0,
+        experimentsMax: 0,
+        maxRounds: 0,
+      };
+    case 'max20x':
+      return {
+        tier: 'full',
+        research: true,
+        experiments: true,
+        bonus: true,
+        topicsMin: 3,
+        topicsMax: 5,
+        experimentsMax: 3,
+        maxRounds: 10,
+      };
+    case 'api':
+      return {
+        tier: 'standard',
+        research: true,
+        experiments: true,
+        bonus: false,
+        topicsMin: 2,
+        topicsMax: 2,
+        experimentsMax: 1,
+        maxRounds: 5,
+      };
+    case 'max5x':
+    default:
+      return {
+        tier: 'standard',
+        research: true,
+        experiments: true,
+        bonus: false,
+        topicsMin: 1,
+        topicsMax: 2,
+        experimentsMax: 1,
+        maxRounds: 5,
+      };
+  }
+}
+
+function applyPlanToConfig(config, plan) {
+  const d = planDefaults(plan);
+  return config
+    .replace(/^tier:\s*\w+/m, `tier: ${d.tier}`)
+    .replace(/^    research:\s*(true|false)/m, `    research: ${d.research}`)
+    .replace(/^    experiments:\s*(true|false)/m, `    experiments: ${d.experiments}`)
+    .replace(/^    bonus_loop:\s*(true|false)/m, `    bonus_loop: ${d.bonus}`)
+    .replace(/^  topics_min:\s*\d+/m, `  topics_min: ${d.topicsMin}`)
+    .replace(/^  topics_max:\s*\d+/m, `  topics_max: ${d.topicsMax}`)
+    .replace(/^  max_per_night:\s*\d+/m, `  max_per_night: ${d.experimentsMax}`)
+    .replace(/^  max_rounds:\s*\d+/m, `  max_rounds: ${d.maxRounds}`);
+}
+
+function writeBudgetProfile(projectDir, plan) {
+  const profile = profileForPlan(plan);
+  const dest = path.join(projectDir, 'homunculus', 'budget-profile.json');
+  if (fs.existsSync(dest)) return false;
+
+  const src = path.join(TEMPLATES_DIR, 'budget-profile.template.json');
+  let text = fs.readFileSync(src, 'utf8');
+  const replacements = {
+    PLAN: profile.plan,
+    SESSION_LIMIT_PCT: profile.session_limit_pct,
+    CONSERVE_SESSION_PCT: profile.conserve_session_pct,
+    WEEKLY_RESERVE_PCT: profile.weekly_reserve_pct,
+    WEEKLY_TIGHT_REMAINING_PCT: profile.weekly_tight_remaining_pct,
+    MAX_PARALLEL_AGENTS: profile.max_parallel_agents,
+    OPUS_POLICY: profile.opus_policy,
+    NOTES: profile.notes,
+  };
+  for (const [key, value] of Object.entries(replacements)) {
+    text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value));
+  }
+  fs.writeFileSync(dest, text);
+  return true;
+}
 
 // Detect project language/framework from filesystem signals
 function detectProjectStack(projectDir) {
@@ -98,6 +198,12 @@ function trackFile(destPath, category, projectDir) {
 
 async function main() {
   const skipStarterPack = process.argv.includes('--no-starter-pack');
+  let plan = argValue('--plan');
+  if (plan && !validPlan(plan)) {
+    console.error(`  Unknown plan: ${plan}`);
+    console.error('  Valid plans: pro, max5x, max20x, api');
+    process.exit(1);
+  }
 
   console.log('');
   console.log('  \x1b[1mHomunculus\x1b[0m — Self-evolving AI Assistant');
@@ -330,40 +436,39 @@ This project uses Homunculus for goal-driven evolution.
     console.log('  \x1b[32m✓\x1b[0m Created .gitignore');
   }
 
-  // 8. Evolution config — tier selection
+  // 8. Evolution config — subscription-aware plan selection
   const configDest = path.join(projectDir, 'evolution-config.yaml');
+  const budgetProfileDest = path.join(projectDir, 'homunculus', 'budget-profile.json');
   if (!fs.existsSync(configDest)) {
     console.log('');
-    console.log('  \x1b[1mEvolution intensity:\x1b[0m');
-    console.log('    1) \x1b[2mminimal\x1b[0m  — instinct harvest + sync only (~$0.5/night)');
-    console.log('    2) \x1b[1mstandard\x1b[0m — + research + experiments (~$2-3/night) \x1b[32m[recommended]\x1b[0m');
-    console.log('    3) \x1b[1mfull\x1b[0m     — + deeper research + bonus loop (~$5-10/night)');
-    console.log('');
-
-    const answer = await ask('  Choose (1/2/3, default=2): ');
-    const tierMap = { '1': 'minimal', '2': 'standard', '3': 'full' };
-    const tier = tierMap[answer] || 'standard';
+    if (!plan) {
+      console.log('  \x1b[1mSubscription profile:\x1b[0m');
+      console.log('    1) \x1b[2mpro\x1b[0m     — $20 Pro, minimal nightly evolution');
+      console.log('    2) \x1b[1mmax5x\x1b[0m   — $100 Max, daily evolution \x1b[32m[recommended]\x1b[0m');
+      console.log('    3) \x1b[1mmax20x\x1b[0m  — $200 Max, full evolution with bounded parallelism');
+      console.log('    4) \x1b[1mapi\x1b[0m     — API/pay-as-you-go, cost-capped externally');
+      console.log('');
+      const answer = await ask('  Choose (1/2/3/4, default=2): ');
+      const planMap = { '1': 'pro', '2': 'max5x', '3': 'max20x', '4': 'api' };
+      plan = planMap[answer] || 'max5x';
+    }
 
     const templateSrc = path.join(TEMPLATES_DIR, 'evolution-config.template.yaml');
     if (fs.existsSync(templateSrc)) {
       let config = fs.readFileSync(templateSrc, 'utf8');
-      // Apply tier-specific defaults
-      config = config.replace(/^tier: standard/m, `tier: ${tier}`);
-      if (tier === 'minimal') {
-        config = config.replace(/research: true/g, 'research: false');
-        config = config.replace(/experiments: true/g, 'experiments: false');
-      } else if (tier === 'full') {
-        config = config.replace(/bonus_loop: false/, 'bonus_loop: true');
-        config = config.replace(/topics_min: 2/, 'topics_min: 3');
-        config = config.replace(/topics_max: 2/, 'topics_max: 5');
-        config = config.replace(/max_per_night: 1/, 'max_per_night: 3');
-        config = config.replace(/max_rounds: 5/, 'max_rounds: 10');
-      }
+      config = applyPlanToConfig(config, plan);
       fs.writeFileSync(configDest, config);
-      console.log(`  \x1b[32m✓\x1b[0m Created evolution-config.yaml (tier: ${tier})`);
+      console.log(`  \x1b[32m✓\x1b[0m Created evolution-config.yaml (plan: ${plan}, tier: ${planDefaults(plan).tier})`);
     }
   } else {
     console.log('  \x1b[33m-\x1b[0m evolution-config.yaml already exists');
+  }
+  if (!fs.existsSync(budgetProfileDest)) {
+    const selectedPlan = plan || 'max5x';
+    writeBudgetProfile(projectDir, selectedPlan);
+    console.log(`  \x1b[32m✓\x1b[0m Created homunculus/budget-profile.json (${selectedPlan})`);
+  } else {
+    console.log('  \x1b[33m-\x1b[0m homunculus/budget-profile.json already exists');
   }
 
   // 9. Write manifest for upgrade tracking

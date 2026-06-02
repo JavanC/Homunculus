@@ -31,18 +31,25 @@ const dim = (t) => colorize(2, t);
 function getManagedFiles() {
   const files = [];
 
-  // Core scripts — auto-replace on upgrade
-  if (fs.existsSync(CORE_DIR)) {
-    for (const entry of fs.readdirSync(CORE_DIR, { withFileTypes: true })) {
-      if (entry.isFile()) {
+  function addDir(srcDir, destDir, category) {
+    if (!fs.existsSync(srcDir)) return;
+    for (const entry of fs.readdirSync(srcDir, { withFileTypes: true })) {
+      const srcPath = path.join(srcDir, entry.name);
+      const destPath = path.join(destDir, entry.name);
+      if (entry.isDirectory()) {
+        addDir(srcPath, destPath, category);
+      } else if (entry.isFile()) {
         files.push({
-          src: path.join(CORE_DIR, entry.name),
-          dest: path.join('homunculus', 'scripts', entry.name),
-          category: 'core',
+          src: srcPath,
+          dest: destPath,
+          category,
         });
       }
     }
   }
+
+  // Core scripts — auto-replace on upgrade
+  addDir(CORE_DIR, path.join('homunculus', 'scripts'), 'core');
 
   // Slash commands — diff-aware
   if (fs.existsSync(COMMANDS_DIR)) {
@@ -68,6 +75,31 @@ function getManagedFiles() {
   }
 
   return files;
+}
+
+function ensureBudgetProfile(projectDir) {
+  const destPath = path.join(projectDir, 'homunculus', 'budget-profile.json');
+  if (fs.existsSync(destPath)) return false;
+
+  const templatePath = path.join(TEMPLATES_DIR, 'budget-profile.template.json');
+  if (!fs.existsSync(templatePath)) return false;
+
+  let text = fs.readFileSync(templatePath, 'utf8');
+  const replacements = {
+    PLAN: 'max5x',
+    SESSION_LIMIT_PCT: 90,
+    CONSERVE_SESSION_PCT: 70,
+    WEEKLY_RESERVE_PCT: 5,
+    WEEKLY_TIGHT_REMAINING_PCT: 2,
+    MAX_PARALLEL_AGENTS: 1,
+    OPUS_POLICY: 'manual-only',
+    NOTES: 'Default Max 5x profile created during upgrade. Edit this file or re-run init in a fresh project to choose another profile.',
+  };
+  for (const [key, value] of Object.entries(replacements)) {
+    text = text.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value));
+  }
+  fs.writeFileSync(destPath, text);
+  return true;
 }
 
 function main() {
@@ -150,7 +182,15 @@ function main() {
       // Commands/Rules: check if user modified
       const userModified = manifestHash && currentHash !== manifestHash;
 
-      if (!userModified) {
+      if (!manifestHash) {
+        // Pre-manifest installs or newly-managed files may already contain user
+        // customizations. Be conservative for human-editable files.
+        newManifest.files[file.dest] = { hash: currentHash, category: file.category };
+        const newVersionPath = destPath + '.new';
+        fs.copyFileSync(file.src, newVersionPath);
+        console.log(`  ${yellow('!')} ${file.dest} ${dim('(not in manifest — new version saved as .new)')}`);
+        stats.conflict++;
+      } else if (!userModified) {
         // User hasn't modified — safe to replace
         fs.copyFileSync(file.src, destPath);
         newManifest.files[file.dest] = { hash: srcHash, category: file.category };
@@ -165,6 +205,11 @@ function main() {
         stats.conflict++;
       }
     }
+  }
+
+  if (ensureBudgetProfile(projectDir)) {
+    console.log(`  ${green('+')} homunculus/budget-profile.json ${dim('(new, default max5x)')}`);
+    stats.added++;
   }
 
   // Write updated manifest

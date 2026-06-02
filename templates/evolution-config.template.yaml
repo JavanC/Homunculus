@@ -3,12 +3,22 @@
 # Controls how deeply and frequently your AI assistant evolves.
 # Edit this file to match your budget and preferences.
 #
+# `homunculus/budget-profile.json` contains the subscription quota guardrails.
+# `evolution-config.yaml` controls which phases are worth spending that quota on.
+#
 # Tiers:
 #   minimal  — Instinct harvest + sync only. Cheapest option. (~$0.5/night)
 #   standard — + research + experiments. Good balance. (~$2-3/night) [default]
 #   full     — + deeper research + bonus loop. For power users. (~$5-10/night)
 #
-# Cost estimates assume Claude Sonnet via API. Subscription users pay no extra.
+# Subscription guidance:
+#   pro     ($20):  use tier:minimal, research:false, experiments:false
+#   max5x   ($100): use tier:standard, 1-2 research topics, 1 experiment
+#   max20x ($200): use tier:full, bounded bonus loop and parallel agents
+#   api:           use tier:standard/full plus an external spend cap
+#
+# Dollar cost is optional. Subscription users should primarily track 5h session
+# utilization and weekly utilization.
 
 tier: standard  # minimal | standard | full
 

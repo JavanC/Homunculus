@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const { createProvider } = require('./providers');
 
 // Configuration — adapt these to your setup
 const BASE_DIR = process.env.HOMUNCULUS_BASE || process.cwd();
@@ -284,25 +285,13 @@ Check for topics the user mentioned but didn't dive into:
 - Output ONLY JSON lines or empty lines, no other text`;
 
   try {
-    const env = { ...process.env };
-    delete env.CLAUDECODE;  // Prevent recursive session
-    const model = process.env.HOMUNCULUS_HARVEST_MODEL || 'claude-sonnet-4-6';
-    const result = execSync(
-      `claude --print --model ${model} --max-turns 1 --no-session-persistence`,
-      {
-        input: prompt,
-        encoding: 'utf8',
-        timeout: 120000,
-        env,
-        stdio: ['pipe', 'pipe', 'pipe']
-      }
-    ).trim();
-
+    const provider = createProvider();
+    const result = provider.invoke(prompt);
     return result;
   } catch (err) {
     log(`Extraction failed: ${err.message?.slice(0, 100)}`);
-    // When called from a CC hook subprocess, claude --print cannot access
-    // Keychain/OAuth tokens and will fail with auth errors. Queue the prompt
+    // When called from a CC hook subprocess, the LLM provider (e.g. claude CLI)
+    // cannot access Keychain/OAuth tokens and will fail with auth errors. Queue the prompt
     // so the next manual or scheduled run (outside hook context) can process it.
     try {
       ensureDir(REPORTS_DIR);
@@ -333,14 +322,9 @@ function processQueue({ existing, todayCount, dynamicLimit }) {
     try { entry = JSON.parse(line); } catch { continue; }
     if (!entry.prompt) continue;
 
-    const env = { ...process.env };
-    delete env.CLAUDECODE;
-    const model = process.env.HOMUNCULUS_HARVEST_MODEL || 'claude-sonnet-4-6';
     try {
-      const result = execSync(
-        `claude --print --model ${model} --max-turns 1 --no-session-persistence`,
-        { input: entry.prompt, encoding: 'utf8', timeout: 120000, env, stdio: ['pipe', 'pipe', 'pipe'] }
-      ).trim();
+      const provider = createProvider();
+      const result = provider.invoke(entry.prompt);
       const s = processResult(result, { existing, todayCount: todayCount + stats.instincts, dynamicLimit });
       stats.instincts += s.instincts;
       stats.memory += s.memory;

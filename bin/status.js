@@ -6,6 +6,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { loadBudgetProfile, loadUsage, classifyBudget } = require('../core/budget');
 
 const projectDir = process.cwd();
 const HOM_DIR = path.join(projectDir, 'homunculus');
@@ -42,6 +43,9 @@ const evals             = countFiles(path.join(HOM_DIR, 'evolved', 'evals'), '.y
 const observations      = countLines(path.join(HOM_DIR, 'observations.jsonl'));
 const experiments       = countFiles(path.join(HOM_DIR, 'experiments'), '.md');
 const hasArch           = fs.existsSync(path.join(projectDir, 'architecture.yaml'));
+const budgetProfile     = loadBudgetProfile(projectDir);
+const usageResult       = loadUsage(projectDir);
+const budgetStatus      = classifyBudget(budgetProfile, usageResult.data);
 
 console.log('');
 console.log('  \x1b[1m🧬 Homunculus Status\x1b[0m');
@@ -55,6 +59,12 @@ console.log(`  Eval Specs:    ${evals}`);
 console.log(`  Observations:  ${observations} recorded`);
 console.log(`  Experiments:   ${experiments} completed`);
 console.log(`  Last Report:   ${lastReport()}`);
+console.log(`  Budget:        ${budgetProfile.plan} / ${budgetStatus.level}`);
+if (budgetStatus.session_pct !== null) {
+  console.log(`                 session ${budgetStatus.session_pct}% | weekly ${budgetStatus.weekly_pct}% | remaining ${budgetStatus.weekly_remaining_pct}%`);
+} else {
+  console.log(`                 ${budgetStatus.reason}`);
+}
 console.log('');
 
 if (!hasArch) {

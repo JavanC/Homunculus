@@ -1,0 +1,11 @@
+{
+  "plan": "{{PLAN}}",
+  "source": "subscription",
+  "session_limit_pct": {{SESSION_LIMIT_PCT}},
+  "conserve_session_pct": {{CONSERVE_SESSION_PCT}},
+  "weekly_reserve_pct": {{WEEKLY_RESERVE_PCT}},
+  "weekly_tight_remaining_pct": {{WEEKLY_TIGHT_REMAINING_PCT}},
+  "max_parallel_agents": {{MAX_PARALLEL_AGENTS}},
+  "opus_policy": "{{OPUS_POLICY}}",
+  "notes": "{{NOTES}}"
+}

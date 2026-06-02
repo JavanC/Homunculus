@@ -166,6 +166,14 @@ continuous_evolution:
 
 ## 更新日志
 
+### v0.12.0 — 订阅用量感知进化设置 (Jun 2026)
+
+- **Plan-aware init** — `init --plan pro|max5x|max20x|api` 会生成对应的 `evolution-config.yaml` 与 `homunculus/budget-profile.json`
+- **Pro 安全默认值** — $20 Pro 默认只运行最小夜间进化：instinct 收割、路由、同步；每日研究/实验默认关闭
+- **Max 5x 默认值** — $100 Max 默认运行有边界的每日进化：1-2 个研究主题、1 个实验、不启用无上限 bonus loop
+- **Quota-first status/night** — `status` 和 `night` 会读取 usage cache，将 budget 分为 `full`、`half`、`skip`、`mp_empty`
+- **订阅计量模型** — 文档改以 5 小时 session 用量与 weekly 用量为主，不依赖不一定存在的 dollar cost 字段
+
 ### v0.11.0 — 跨平台进化支持 (Apr 2026)
 
 - **Cursor 支持** — `init` 自动检测 `.cursor/` 并安装 `alwaysApply: true` 的 rule（`evolution-system.mdc`），让 agent 始终具备目标意识；同时在 `.cursor/rules/` 安装操作路由 skill。Stop hook 在 session 结束时触发 instinct 提取
@@ -234,6 +242,15 @@ continuous_evolution:
 
 ```bash
 npx homunculus-code init
+```
+
+如果已经知道你的订阅方案，可以直接指定 profile：
+
+```bash
+npx homunculus-code init --plan pro     # $20 Pro：最小夜间进化
+npx homunculus-code init --plan max5x   # $100 Max：有边界的每日进化
+npx homunculus-code init --plan max20x  # $200 Max：完整进化，限制并行 agent
+npx homunculus-code init --plan api     # API/PAYG：用外部成本上限控制
 ```
 
 `init` 自动检测你的 AI host（Claude Code、Cursor 或 Codex CLI）并安装对应配置：
@@ -403,9 +420,27 @@ homunculus night     CLI：通过 LLM provider 运行进化周期（任意终端
 
 你也可以随时手动运行 `/hm-night` 按需触发一个周期。
 
+### 订阅 Profile
+
+Homunculus 在 `init` 时会创建两个配置文件：
+
+- `evolution-config.yaml` — 控制哪些 phase 值得运行
+- `homunculus/budget-profile.json` — 控制你的方案用量 guardrail
+
+建议默认值：
+
+| 方案 | 月费 | 进化层级 | 每日研究 | 每日实验 | 并行 agent | Opus 策略 |
+|------|------|----------|----------|----------|------------|-----------|
+| Pro | $20 | minimal | 关闭 | 关闭 | 1 | Claude Code 不可用 |
+| Max 5x | $100 | standard | 1-2 个主题 | 每晚 1 个 | 1 | 手动使用 |
+| Max 20x | $200 | full | 3-5 个主题 | 每晚 3 个 | 最多 3 | 仅用于 planning/review |
+| API/PAYG | 变动 | standard | 2 个主题 | 每晚 1 个 | 2 | 由外部成本上限控制 |
+
+Claude Code 订阅用量会与 Claude.ai / Claude Desktop 共用。订阅用户最重要的指标是 **5 小时 session 用量**与 **weekly 用量**；dollar cost 字段不一定存在。
+
 ### 进化层级
 
-通过 `evolution-config.yaml`（`init` 时创建）控制助手每晚进化的深度：
+通过 `evolution-config.yaml` 控制助手每晚进化的深度：
 
 | | Minimal | Standard | Full |
 |---|---------|----------|------|
@@ -423,7 +458,7 @@ homunculus night     CLI：通过 LLM provider 运行进化周期（任意终端
 # 编辑 evolution-config.yaml → tier: minimal | standard | full
 ```
 
-订阅用户（Max/Team）可以运行 `full` 而无需额外 API 费用。
+订阅用户只有在方案仍有足够 quota 时才建议使用 `full`。如果有 usage cache，`homunculus-code status` 会显示当前 budget level。
 
 ```
  You go to sleep
