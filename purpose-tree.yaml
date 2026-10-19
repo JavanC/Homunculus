@@ -19,6 +19,7 @@
 # Last updated: 2026-10-20
 
 version: "3.0"
+last_synced: 7ee2d883ab5f1885942c89045d39e6b89fa7ca12
 
 root:
   purpose: The Homunculus skill keeps getting better across all kinds of projects.
