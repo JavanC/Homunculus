@@ -1,5 +1,5 @@
 # purpose-tree.yaml — why this project exists, and what currently realizes each purpose.
-# Method and rules: the purpose-tree skill. Validate: node <skill>/scripts/validate.js
+# Method and rules: the purpose-tree skill. Validate: node <skill>/scripts/validate.cjs
 version: "3.0"
 
 root:

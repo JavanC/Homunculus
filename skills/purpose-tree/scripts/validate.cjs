@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
-// validate.js — check a purpose tree against schema v3.0. Zero dependencies.
-// Usage: node validate.js [path]   (default: ./purpose-tree.yaml, then ./architecture.yaml)
+// validate.cjs — check a purpose tree against schema v3.0. Zero dependencies.
+// Usage: node validate.cjs [path]   (default: ./purpose-tree.yaml, then ./architecture.yaml)
 // A .md path validates the first ```yaml block in it.
 // Exit 0 = valid, 1 = problems found, 2 = file missing or unparseable.
 

@@ -1,12 +1,12 @@
 'use strict';
-// Run: node --test skills/purpose-tree/tests/validate.test.js
+// Run: node --test skills/purpose-tree/tests/validate.test.cjs
 const test = require('node:test');
 const assert = require('node:assert');
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const V = path.join(__dirname, '..', 'scripts', 'validate.js');
+const V = path.join(__dirname, '..', 'scripts', 'validate.cjs');
 const FIX = path.join(__dirname, 'fixtures');
 
 function run(file) {

@@ -78,7 +78,7 @@ Blank starting tree: [templates/purpose-tree.yaml](templates/purpose-tree.yaml).
 ## Validate
 
 ```bash
-node <this-skill>/scripts/validate.js [path-to-tree]
+node <this-skill>/scripts/validate.cjs [path-to-tree]
 ```
 
 Exit 0 = valid; exit 1 prints each problem. Run it after every edit to the tree.
