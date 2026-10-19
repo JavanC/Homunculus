@@ -105,3 +105,11 @@ root:
   assert.strictEqual(out.tree, 'architecture.yaml');
   assert.deepStrictEqual(out.changes[0].nodes, ['brief']);
 });
+
+test('untracked directory is one entry, not every file in it', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  for (let i = 0; i < 20; i++) r.write(`data/run-${i}.json`, '{}');
+  const { out } = r.run();
+  assert.deepStrictEqual(out.changes.map((c) => c.path), ['data/']);
+});

@@ -91,7 +91,7 @@ function main() {
       else changes.set(parts[1], { path: parts[1], status: st });
     }
   }
-  for (const f of (tryGit(['ls-files', '--others', '--exclude-standard']) || '').split('\n').filter(Boolean)) {
+  for (const f of (tryGit(['ls-files', '--others', '--exclude-standard', '--directory']) || '').split('\n').filter(Boolean)) {
     if (!changes.has(f)) changes.set(f, { path: f, status: '?' });
   }
   changes.delete(tree);
