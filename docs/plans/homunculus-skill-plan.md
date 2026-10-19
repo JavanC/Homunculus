@@ -27,6 +27,7 @@ Status: draft for review (2026-10-19). Nothing implemented yet.
 | D13 | (2026-10-20) A project's tree file is `purpose-tree.yaml` at the project root, created lazily. The skill looks for `purpose-tree.yaml` first, then falls back to legacy `architecture.yaml`. Validation script is zero-dependency Node (YAML subset parser). |
 | D14 | (2026-10-20) Sub-purposes live inside `realized_by`: a list of means where an item with `purpose` is a sub-purpose (with `id`) and a string is an implementation. Measurable targets go in `metrics`. All means are AND; OR is deferred until needed. Legacy `goals:` maps are still read. Basis: Rasmussen means-ends hierarchy and GSN (goals supported by sub-goals and solutions through one link type). |
 | D15 | (2026-10-20) Public docs name no private projects, hosts, or tools. Internal plans with real names live in the maintainer's private repo; this repo keeps the generic version. |
+| D16 | (2026-10-20) Session-end sync skill is **`purpose-sync`** (tree A 2.1 + session-scoped 2.2). Input: git changes since the tree's `last_synced` commit, not memory. Silent when nothing to propose; otherwise one numbered list answered in one reply. Ends with a one-line summary (`purpose-sync: proposed=N accepted=N rejected=N`) for a private host to log; the skill itself stores nothing. |
 
 ## Purpose tree A — what Homunculus does inside a project
 
