@@ -1,0 +1,6 @@
+version: "3.0"
+root:
+  purpose: x
+  health_check:
+    command: test -f data/log.jsonl
+    expected: log exists

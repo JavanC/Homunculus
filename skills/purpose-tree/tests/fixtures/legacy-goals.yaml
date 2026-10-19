@@ -1,0 +1,7 @@
+version: "3.0"
+root:
+  purpose: Legacy tree using a goals map.
+  goals:
+    child_a:
+      purpose: A child written the old way.
+      realized_by: some/script.sh

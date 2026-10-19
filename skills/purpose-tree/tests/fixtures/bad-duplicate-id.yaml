@@ -1,0 +1,8 @@
+version: "3.0"
+root:
+  purpose: x
+  realized_by:
+    - id: a
+      purpose: one
+    - id: a
+      purpose: two

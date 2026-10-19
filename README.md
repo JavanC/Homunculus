@@ -171,7 +171,7 @@ The evolution engine then:
 
 - **Direction change** — Homunculus is being rebuilt as a skill collection centered on the goal-tree method. See the [plan](docs/plans/homunculus-skill-plan.md) and the [project purpose tree](docs/purpose-tree-project.md)
 - **npm CLI is now legacy** — `bin/`, `core/`, the nightly agent, and instincts are frozen: kept and working, but no new development, and new skills will not depend on them
-- **Self-managed** — this repo now has its own [`architecture.yaml`](architecture.yaml)
+- **Self-managed** — this repo now has its own [`purpose-tree.yaml`](purpose-tree.yaml)
 
 ### v0.12.1 — ESM Host Compatibility Fix (Jun 2026)
 

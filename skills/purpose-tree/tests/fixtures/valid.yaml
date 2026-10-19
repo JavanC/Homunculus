@@ -1,0 +1,18 @@
+version: "3.0"
+root:
+  purpose: Keep commitments without having to remember them.
+  metrics:
+    - name: dropped_commitments
+      source: weekly review
+      healthy: "0 per week"
+  realized_by:
+    - scripts/capture.js
+    - id: daily_awareness
+      purpose: Know what matters before the day starts.
+      status: planned
+      paused_reason: Waiting on calendar access; resume when granted.
+      realized_by:
+        - morning brief job
+      health_check:
+        command: node scripts/check-brief.js --require-today
+        expected: today's brief exists and is non-empty

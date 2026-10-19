@@ -1,0 +1,9 @@
+# purpose-tree.yaml — why this project exists, and what currently realizes each purpose.
+# Method and rules: the purpose-tree skill. Validate: node <skill>/scripts/validate.js
+version: "3.0"
+
+root:
+  purpose: One sentence on why this project exists (set by a human).
+  status: planned
+  paused_reason: Tree just created. Resume by adding the first sub-purposes in review.
+  realized_by: []

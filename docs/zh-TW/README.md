@@ -170,7 +170,7 @@ continuous_evolution:
 
 - **方向調整** — Homunculus 正在以目標樹方法為核心，重建成一組 skill。詳見[計畫](../plans/homunculus-skill-plan.md)與[專案目的樹](../purpose-tree-project.md)
 - **npm CLI 轉為 legacy** — `bin/`、`core/`、夜間 agent、instinct 已凍結：保留可用，但不再開發，新的 skill 不會依賴它們
-- **自我管理** — 本 repo 現在有自己的 [`architecture.yaml`](../../architecture.yaml)
+- **自我管理** — 本 repo 現在有自己的 [`purpose-tree.yaml`](../../purpose-tree.yaml)
 
 ### v0.12.1 — ESM Host 相容性修正 (Jun 2026)
 
