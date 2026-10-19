@@ -113,3 +113,10 @@ test('untracked directory is one entry, not every file in it', () => {
   const { out } = r.run();
   assert.deepStrictEqual(out.changes.map((c) => c.path), ['data/']);
 });
+
+test('empty untracked directories are ignored', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  fs.mkdirSync(path.join(r.dir, 'empty', 'nested'), { recursive: true });
+  assert.deepStrictEqual(r.run().out.changes, []);
+});
