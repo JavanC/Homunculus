@@ -1,0 +1,60 @@
+# architecture.yaml — this repo's own goal tree (Homunculus managing itself)
+# Each node is a GOAL, not a system. Systems are means to achieve goals.
+#
+# Node schema (v3.0):
+#   purpose:       Why this goal exists (serves which parent goal)
+#   realized_by:   What implements it (path, system, or description)
+#   status:        active | paused | planned (default active). A retired goal is deleted.
+#   status_note:   Free text: current state, known gaps
+#   paused_reason: Required when status is paused or planned: why, and how to resume
+#   metrics:       How to measure success [{name, source, healthy}]
+#   tests:         Leaf-level verification [test file patterns]
+#   goals:         Sub-goals (recursive)
+#   health_check:  {command, expected}. Must FAIL when the data it judges does not exist.
+#
+# The tree for what Homunculus does *inside a project* lives in
+# docs/purpose-tree-project.md. This file is tree B: how the skill itself improves.
+# Plan: docs/plans/homunculus-skill-plan.md
+#
+# Last updated: 2026-10-20
+
+version: "3.0"
+
+root:
+  purpose: The Homunculus skill keeps getting better across all kinds of projects.
+  status: planned
+  paused_reason: Skills not built yet (plan Phase 1). Resume when the core skill ships.
+  metrics:
+    - name: proposal_acceptance_rate
+      source: private usage log (component=homunculus)
+      healthy: rising or stable across >=2 project types
+    - name: real_alert_ratio
+      source: private usage log (health_check alerts marked real vs false)
+      healthy: rising or stable
+    - name: rabbit_hole_incidents_per_session
+      source: private usage log
+      healthy: falling or stable
+  goals:
+    observe_usage:
+      purpose: See how projects actually use the skill, so improvements are driven by evidence.
+      realized_by: "# private observation loop (plan Phase 3)"
+      status: planned
+      paused_reason: Needs the pilot projects running (plan Phase 2). Resume after the 2-week pilot.
+      status_note: >-
+        Log proposals accepted/rejected, health_check alerts real/false, and
+        rabbit-hole incidents. Data stays private.
+
+    general_improvements:
+      purpose: Keep the skill general, not tuned to one project.
+      realized_by: "# >=2-project evidence rule + multi-project eval fixtures (plan Phase 3)"
+      status: planned
+      paused_reason: Needs observations from >=2 project types. Resume after the first monthly roll-up.
+      status_note: >-
+        A skill change requires the same problem seen in >=2 different project
+        types. Existing evals (all at 100) are a no-regression gate only.
+
+    safe_publication:
+      purpose: Let improvements reach this public repo without leaking private data.
+      realized_by: "# privacy scan (pre-commit + CI) + PR-only merges (plan Phase 4)"
+      status: planned
+      paused_reason: Built in plan Phase 4. Resume when the first improvement branch exists.
