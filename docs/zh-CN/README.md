@@ -168,9 +168,8 @@ continuous_evolution:
 
 ### 未发布 — 转为 Skill 集合
 
-- **方向调整** — Homunculus 正在以目标树方法为核心，重建为一组 skill。详见[计划](../plans/homunculus-skill-plan.md)与[项目目的树](../purpose-tree-project.md)
+- **方向调整** — Homunculus 正在以目的树方法为核心，重建为一组 skill：`purpose-tree`（方法本身）、`purpose-sync`（收尾同步与审视）、`purpose-review`（建树或审树）。安装：`npx skills add JavanC/Homunculus`
 - **npm CLI 转为 legacy** — `bin/`、`core/`、夜间 agent、instinct 已冻结：保留可用，但不再开发，新的 skill 不会依赖它们
-- **自我管理** — 本 repo 现在有自己的 [`purpose-tree.yaml`](../../purpose-tree.yaml)
 
 ### v0.12.1 — ESM Host 兼容性修复 (Jun 2026)
 

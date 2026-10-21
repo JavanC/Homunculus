@@ -169,9 +169,8 @@ The evolution engine then:
 
 ### Unreleased — Moving to a Skill Collection
 
-- **Direction change** — Homunculus is being rebuilt as a skill collection centered on the goal-tree method. See the [plan](docs/plans/homunculus-skill-plan.md) and the [project purpose tree](docs/purpose-tree-project.md)
+- **Direction change** — Homunculus is being rebuilt as a skill collection centered on the purpose-tree method: `purpose-tree` (the method), `purpose-sync` (session-end sync and review), `purpose-review` (build or review a tree). Install: `npx skills add JavanC/Homunculus`
 - **npm CLI is now legacy** — `bin/`, `core/`, the nightly agent, and instincts are frozen: kept and working, but no new development, and new skills will not depend on them
-- **Self-managed** — this repo now has its own [`purpose-tree.yaml`](purpose-tree.yaml)
 
 ### v0.12.1 — ESM Host Compatibility Fix (Jun 2026)
 

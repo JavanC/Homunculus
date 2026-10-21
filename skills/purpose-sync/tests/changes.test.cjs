@@ -120,3 +120,27 @@ test('empty untracked directories are ignored', () => {
   fs.mkdirSync(path.join(r.dir, 'empty', 'nested'), { recursive: true });
   assert.deepStrictEqual(r.run().out.changes, []);
 });
+
+test('churn: a touched node whose realized_by keeps changing is flagged', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  for (let i = 1; i <= 3; i++) {
+    r.write('purpose-tree.yaml', TREE.replace('- scripts/brief.js', `- scripts/brief.js\n        - extra-${i}`));
+    r.sh('commit', '-qam', `tweak ${i}`);
+  }
+  r.write('scripts/brief.js', '2');
+  const { out } = r.run();
+  assert.deepStrictEqual(out.churn.map((c) => c.id), ['brief']);
+  assert.ok(out.churn[0].changes_in_window >= 3);
+});
+
+test('churn: an untouched node is not flagged', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  for (let i = 1; i <= 3; i++) {
+    r.write('purpose-tree.yaml', TREE.replace('- scripts/brief.js', `- scripts/brief.js\n        - extra-${i}`));
+    r.sh('commit', '-qam', `tweak ${i}`);
+  }
+  assert.deepStrictEqual(r.run().out.churn, []);
+});

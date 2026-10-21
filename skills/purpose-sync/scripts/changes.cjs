@@ -15,28 +15,18 @@ function tryGit(args) {
   try { return git(args); } catch { return null; }
 }
 
-function loadParser() {
-  const p = path.join(__dirname, '..', '..', 'purpose-tree', 'scripts', 'validate.cjs');
+function loadTreeLib() {
+  const p = path.join(__dirname, '..', '..', 'purpose-tree', 'scripts', 'tree.cjs');
   if (!fs.existsSync(p)) {
     console.error('purpose-tree skill not found next to purpose-sync. Install it: npx skills add JavanC/Homunculus');
     process.exit(3);
   }
-  return require(p).parseYaml;
+  return { ...require(p), parseYaml: require(path.join(path.dirname(p), 'validate.cjs')).parseYaml };
 }
 
-// Collect {id, impls[]} for every node, including legacy goals: maps.
-function collectNodes(node, id, out) {
-  if (!node || typeof node !== 'object') return;
-  const rb = node.realized_by;
-  const means = rb == null ? [] : Array.isArray(rb) ? rb : [rb];
-  const impls = means.filter((m) => typeof m === 'string');
-  const subs = means.length - impls.length + (node.goals && typeof node.goals === 'object' ? Object.keys(node.goals).length : 0);
-  out.push({ id: node.id || id, impls, means: impls.length + subs });
-  means.forEach((m) => { if (m && typeof m === 'object' && 'purpose' in m) collectNodes(m, m.id, out); });
-  if (node.goals && typeof node.goals === 'object') {
-    for (const [k, c] of Object.entries(node.goals)) collectNodes(c, (c && c.id) || k, out);
-  }
-}
+// Signal (b): a node touched now whose realized_by already changed this often recently.
+const CHURN_DAYS = 30;
+const CHURN_MIN = 3;
 
 const norm = (p) => p.replace(/^\.\//, '').replace(/^~\/[^/]+\//, '');
 
@@ -59,10 +49,10 @@ function main() {
   }
   const root = git(['rev-parse', '--show-toplevel']);
   process.chdir(root);
-  const tree = ['purpose-tree.yaml', 'architecture.yaml'].find((f) => fs.existsSync(f));
+  const lib = loadTreeLib();
+  const tree = lib.findTree();
   if (!tree) process.exit(2);
-
-  const parseYaml = loadParser();
+  const { parseYaml, collectNodes } = lib;
   let doc;
   try { doc = parseYaml(fs.readFileSync(tree, 'utf8')); } catch (e) {
     console.error(`${tree}: ${e.message}`);
@@ -96,13 +86,18 @@ function main() {
   }
   changes.delete(tree);
 
-  const nodes = [];
-  collectNodes(doc && doc.root, 'root', nodes);
+  const nodes = collectNodes(doc && doc.root);
 
   const list = [...changes.values()].map((c) => {
     const hit = nodes.filter((n) => n.impls.some((i) => mentions(i, c.path) || (c.from && mentions(i, c.from))));
     return { ...c, nodes: hit.map((n) => n.id) };
   });
+
+  const touched = new Set(list.flatMap((c) => c.nodes));
+  const hist = touched.size ? lib.nodeHistory(tree, { windowDays: CHURN_DAYS }) : {};
+  const churn = [...touched]
+    .filter((id) => hist[id] && hist[id].recent_changes >= CHURN_MIN)
+    .map((id) => ({ id, changes_in_window: hist[id].recent_changes, window_days: CHURN_DAYS }));
 
   const out = {
     tree,
@@ -112,9 +107,10 @@ function main() {
     changes: list,
     unmatched: list.filter((c) => c.nodes.length === 0).map((c) => c.path),
     nodes_without_implementation: nodes.filter((n) => n.means === 0).map((n) => n.id),
+    churn,
   };
   process.stdout.write(JSON.stringify(out, null, 2) + '\n');
 }
 
 if (require.main === module) main();
-module.exports = { mentions, collectNodes };
+module.exports = { mentions };
