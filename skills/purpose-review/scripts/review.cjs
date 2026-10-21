@@ -24,16 +24,43 @@ function git(args) {
   return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
-// Tracked top-level entries with how many tracked files each holds.
-function inventory() {
+function tracked() {
+  return git(['ls-files']).split('\n').filter(Boolean);
+}
+
+function plumbing(entry) {
+  return PLUMBING.test(entry.replace(/\/$/, '')) || entry === findTree();
+}
+
+// Tracked top-level entries with how many tracked files each holds. With deep, each
+// directory also lists its subdirectories (one level down), so feature areas such as
+// src/compliance/ show up instead of hiding inside src/.
+function inventory({ deep = false } = {}) {
   const counts = new Map();
-  for (const f of git(['ls-files']).split('\n').filter(Boolean)) {
-    const i = f.indexOf('/');
-    const top = i === -1 ? f : f.slice(0, i + 1);
+  const subs = new Map();
+  for (const f of tracked()) {
+    const parts = f.split('/');
+    const top = parts.length === 1 ? f : parts[0] + '/';
     counts.set(top, (counts.get(top) || 0) + 1);
+    if (deep && parts.length > 2) {
+      const m = subs.get(top) || new Map();
+      const sub = top + parts[1] + '/';
+      m.set(sub, (m.get(sub) || 0) + 1);
+      subs.set(top, m);
+    }
   }
-  return [...counts].map(([entry, files]) => ({ entry, files }))
-    .filter((e) => !PLUMBING.test(e.entry.replace(/\/$/, '')) && e.entry !== findTree());
+  return [...counts].filter(([entry]) => !plumbing(entry)).map(([entry, files]) => {
+    const e = { entry, files };
+    if (deep && subs.has(entry)) e.areas = [...subs.get(entry)].map(([a, n]) => ({ entry: a, files: n }));
+    return e;
+  });
+}
+
+// Tracked documents that may state why the project exists: READMEs, agent instructions,
+// product briefs, ADRs, and anything under docs/.
+const INTENT = /(^|\/)(README|CLAUDE|AGENTS|VISION|PRODUCT|BRIEF|PRD|ROADMAP)[^/]*\.(md|txt|rst)$|(^|\/)(docs?|adrs?|decisions)\/.*\.(md|txt|rst)$/i;
+function intentDocs() {
+  return tracked().filter((f) => INTENT.test(f) && !f.includes('node_modules/'));
 }
 
 // Path-like tokens in an implementation string.
@@ -58,7 +85,7 @@ function main() {
   }
   const tree = findTree();
   if (!tree) {
-    process.stdout.write(JSON.stringify({ mode: 'bootstrap', inventory: inventory() }, null, 2) + '\n');
+    process.stdout.write(JSON.stringify({ mode: 'bootstrap', intent_docs: intentDocs(), inventory: inventory({ deep: true }) }, null, 2) + '\n');
     return;
   }
 

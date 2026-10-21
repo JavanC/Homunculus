@@ -63,7 +63,9 @@ Blank starting tree: [templates/purpose-tree.yaml](templates/purpose-tree.yaml).
 
 ## Top-down rule
 
-1. The **human** sets the root and every upper purpose. Never invent or reword one on your own.
+1. The **human** sets the root and every upper purpose. You may draft them (each line labeled
+   with its source: a doc line or "inferred from code"), but never write or reword one the
+   human has not confirmed.
 2. You may **propose** lower purposes under an existing one; the human accepts or rejects.
 3. A child must serve its parent. If you cannot say how, it does not belong there.
 4. Upper purposes change only in an explicit review — never as a side effect of daily work.

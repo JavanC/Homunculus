@@ -22,18 +22,40 @@ The output's `mode` decides the next step.
 
 ## Bootstrap (`mode: bootstrap` — no tree yet)
 
-1. Ask exactly one question: **"Why does this project exist? (one sentence)"**. That
-   answer is the root `purpose`. Never infer the root from the code: code shows what a
-   project does, not why.
-2. Read the `inventory` entries (and the README) to understand the main areas.
-3. Propose first-layer purposes — each one a *why* that serves the root — and list under
-   each the inventory entries that realize it. Aim for 3–6. Put entries that fit none
-   under a **gap** line instead of inventing a purpose for them.
-4. Show the draft as one numbered list and ask once: "Accept all? (or e.g. 'reject 2',
-   '3: reword to …')". Unanswered items count as rejected.
-5. Write `purpose-tree.yaml` from the [template](../purpose-tree/templates/purpose-tree.yaml)
+The AI may **draft** the root and first layer, labeled by source. The human confirms
+every line. Do not open with "Why does this project exist?" when the repo has material
+to draft from.
+
+1. **Read first.** Read every file in `intent_docs` (README, CLAUDE.md/AGENTS.md, product
+   brief, ADRs, docs/) and the full `inventory`, including each entry's `areas` (one level
+   deeper, e.g. `src/compliance/`). Every area must end up under a purpose or a gap line.
+2. **Draft the root and first layer together.** Root = one sentence of *why*. First layer =
+   3–6 purposes that serve the root, each with the inventory entries/areas that realize it.
+   Every line carries its source: `(from doc: README.md:3)` or `(inferred from code: src/sync/)`.
+3. **Self-check the draft before showing it.** Fix, don't just note:
+   - **Means as purposes.** A proposed purpose that names a tool, product, platform, or
+     file ("iOS app + Supabase", "subscription", "the CLI") is a means: move it into the
+     `realized_by` of the purpose it serves.
+   - **Sibling overlap.** Two siblings that would be satisfied by the same work are one
+     purpose: merge them.
+   - **Mixed root.** If the root sentence also carries origin story, constraints, or
+     targets, split them out: constraints/targets → `metrics` or children; background →
+     `status_note`. The root keeps only the why.
+   - **Coverage.** Inventory areas that fit no purpose go under a **gap** line, not into an
+     invented purpose.
+4. **Ask what code cannot show.** If any draft line is inferred from code, add direct
+   questions for what code cannot reveal: profit or revenue goal, the owner's own use,
+   community or audience, purposes not built yet.
+5. Show root + first layer + gaps + questions as **one numbered list** and ask once:
+   "Accept all? (or e.g. 'reject 2', '3: reword to …')". Unanswered items count as rejected.
+   A rejected or unanswered root means no tree yet: ask for the root in one sentence.
+6. Write `purpose-tree.yaml` from the [template](../purpose-tree/templates/purpose-tree.yaml)
    with the accepted nodes, set `last_synced:` to the current `HEAD`, and validate.
    Deeper levels grow later through `purpose-sync`; do not draft them now.
+
+**Empty or near-empty repo** (no intent docs and almost no inventory): there is nothing to
+draft from. Ask exactly one question — "Why does this project exist? (one sentence)" —
+use the answer as the root, then continue from step 2 for the first layer.
 
 ## Full review (`mode: review`)
 
@@ -70,6 +92,6 @@ Then:
 
 ## Rules
 
-- Never invent an upper purpose. Propose; the human decides.
+- Never write an upper purpose the human has not confirmed. Draft with sources; the human decides.
 - Commit nothing unless asked.
 - Do not re-review nodes the human already kept in this run.

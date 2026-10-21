@@ -45,6 +45,29 @@ test('no tree → bootstrap inventory without plumbing', () => {
   const out = r.run();
   assert.strictEqual(out.mode, 'bootstrap');
   assert.deepStrictEqual(out.inventory, [{ entry: 'src/', files: 2 }]);
+  assert.deepStrictEqual(out.intent_docs, ['README.md']);
+});
+
+test('bootstrap inventory goes one level deeper into feature areas', () => {
+  const r = repo();
+  r.write('src/compliance/a.js', '1'); r.write('src/compliance/b.js', '1');
+  r.write('src/sync/c.js', '1'); r.write('src/main.js', '1'); r.write('ops/deploy.sh', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const out = r.run();
+  assert.deepStrictEqual(out.inventory, [
+    { entry: 'ops/', files: 1 },
+    { entry: 'src/', files: 4, areas: [{ entry: 'src/compliance/', files: 2 }, { entry: 'src/sync/', files: 1 }] },
+  ]);
+});
+
+test('bootstrap lists intent docs: README, agent files, briefs, ADRs, docs/', () => {
+  const r = repo();
+  for (const f of ['README.md', 'CLAUDE.md', 'AGENTS.md', 'docs/product-brief.md', 'docs/adr/0001-db.md',
+    'app/README.md', 'PRD.md', 'src/x.js', 'notes.txt']) r.write(f, 'x');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const out = r.run();
+  assert.deepStrictEqual(out.intent_docs.sort(), ['AGENTS.md', 'CLAUDE.md', 'PRD.md', 'README.md', 'app/README.md',
+    'docs/adr/0001-db.md', 'docs/product-brief.md']);
 });
 
 test('review finds missing paths, empty nodes, unowned entries', () => {
