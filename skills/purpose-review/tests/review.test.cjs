@@ -83,6 +83,15 @@ test('review finds missing paths, empty nodes, unowned entries', () => {
   assert.strictEqual(out.health_checks[0].exit, undefined);
 });
 
+test('non-ASCII file names are not split into a separate quoted entry', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', '1'); r.write('app/簡報.pptx', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const unowned = r.run().unowned;
+  assert.deepStrictEqual(unowned.map((e) => e.entry), ['app/']);
+  assert.strictEqual(unowned[0].files, 1);
+});
+
 test('--run-checks records a failing health check', () => {
   const r = repo();
   r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', '1');

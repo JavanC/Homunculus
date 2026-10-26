@@ -25,7 +25,8 @@ function git(args) {
 }
 
 function tracked() {
-  return git(['ls-files']).split('\n').filter(Boolean);
+  // -z: without it git quotes non-ASCII paths ("dir/\350...") and the quote becomes a fake top-level entry.
+  return git(['ls-files', '-z']).split('\0').filter(Boolean);
 }
 
 function plumbing(entry) {
