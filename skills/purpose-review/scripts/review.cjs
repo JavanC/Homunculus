@@ -63,14 +63,44 @@ function intentDocs() {
   return tracked().filter((f) => INTENT.test(f) && !f.includes('node_modules/'));
 }
 
-// Path-like tokens in an implementation string.
-function pathTokens(impl) {
-  return impl.split(/[\s,()"'`]+/).map((t) => t.replace(/^\.\//, ''))
-    .filter((t) => t && /[./]/.test(t) && !/^https?:/.test(t) && !/^\.+$/.test(t) && !/^[\d.]+$/.test(t));
+// Extensions that make a bare token count as a file path. Without one, a token must end in /
+// to count, so repo slugs (owner/name), hostnames and versions are not mistaken for paths.
+const FILE_EXT = /\.(c?js|mjs|jsx|tsx?|json|ya?ml|toml|md|txt|sh|zsh|bash|py|rb|go|rs|swift|kt|java|sql|html?|css|scss|plist|xml|env|lock|cfg|ini|csv|jsonl|svg|png|jpe?g)$/i;
+
+// Expand one {a,b} group per pass so core/x.{js,json} becomes two paths before splitting on commas.
+function expandBraces(s) {
+  const m = s.match(/^(.*?)(\S*)\{([^{}\s]*)\}(\S*)(.*)$/s);
+  if (!m) return [s];
+  return m[3].split(',').flatMap((alt) => expandBraces(m[1] + m[2] + alt + m[4] + m[5]));
 }
 
-function looksLikePath(t) {
-  return t.includes('/') || /\.[a-z0-9]{1,5}$/i.test(t);
+// Path-like tokens in an implementation string: files with a known extension or directories
+// ending in /. Skips URLs, routes and slash commands (leading /), emails, globs, ~ paths outside
+// the repo, and versions.
+function pathTokens(impl, repoName = null) {
+  const out = [];
+  for (const piece of expandBraces(impl)) {
+    for (let t of piece.split(/[\s,()"'`]+/)) {
+      t = t.replace(/^\.\//, '').replace(/[;:.]+$/, '');
+      if (t.startsWith('~/')) {
+        const rest = t.split('/');
+        if (rest[1] !== repoName) continue;
+        t = rest.slice(2).join('/');
+      }
+      if (!t || t.startsWith('/') || t.startsWith('~') || /^[a-z][a-z0-9+.-]*:/i.test(t)) continue;
+      if (/[@*{}<>=]/.test(t) || /^v?\d[\d.]*$/.test(t)) continue;
+      if (t.endsWith('/') || FILE_EXT.test(t)) out.push(t);
+    }
+  }
+  return [...new Set(out)];
+}
+
+// The tracked file a token refers to: at the repo root, or (for tokens written relative to a
+// subdirectory, like twitter.sh under daily-news/sources/) the first tracked file ending in it.
+function resolve(t, files) {
+  const bare = t.replace(/\/$/, '');
+  if (fs.existsSync(bare)) return bare;
+  return files.find((f) => f.endsWith('/' + bare) || (t.endsWith('/') && f.includes('/' + t))) || null;
 }
 
 function arg(name) {
@@ -103,11 +133,13 @@ function main() {
   // Implementations whose paths are gone, and top-level entries no implementation mentions.
   const missing = [];
   const mentioned = new Set();
+  const files = tracked();
+  const repoName = path.basename(process.cwd());
   for (const n of nodes) {
     for (const impl of n.impls) {
-      for (const t of pathTokens(impl).filter(looksLikePath)) {
-        const clean = t.replace(/^~\/[^/]+\//, '');
-        if (fs.existsSync(clean)) mentioned.add(clean.split('/')[0]);
+      for (const t of pathTokens(impl, repoName)) {
+        const hit = resolve(t, files);
+        if (hit) mentioned.add(hit.split('/')[0]);
         else missing.push({ id: n.id, path: t });
       }
     }
@@ -153,4 +185,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { pathTokens, looksLikePath };
+module.exports = { pathTokens };

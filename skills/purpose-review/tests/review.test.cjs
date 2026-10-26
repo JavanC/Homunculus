@@ -103,3 +103,27 @@ test('stale: nodes unchanged for longer than --stale-days', () => {
   assert.strictEqual(out.stale.find((s) => s.id === 'empty_one').status, 'planned');
   assert.deepStrictEqual(r.run('--stale-days', '100000').stale, []);
 });
+
+test('pathTokens keeps real paths and drops routes, commands, slugs, emails, versions, globs', () => {
+  const { pathTokens } = require(SCRIPT);
+  const toks = pathTokens('scripts/a.js; /api/timer /end JavanC/Homunculus me@x.com v2.0.1 example.com src/*.js docs/ ~/other/x.md ~/proj/lib/y.ts core/p/{index,util}.js', 'proj');
+  assert.deepStrictEqual([...toks].sort(), ['core/p/index.js', 'core/p/util.js', 'docs/', 'lib/y.ts', 'scripts/a.js']);
+});
+
+test('review resolves subdirectory-relative paths and does not flag prose tokens', () => {
+  const r = repo();
+  r.write('daily-news/sources/twitter.sh', '1'); r.write('scripts/real.js', '1');
+  r.write('purpose-tree.yaml', `version: "3.0"
+root:
+  purpose: Root.
+  realized_by:
+    - id: news
+      purpose: Know the news.
+      realized_by:
+        - twitter.sh, scripts/real.js, /api/timer, JavanC/Homunculus, scripts/gone.js
+`);
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const out = r.run();
+  assert.deepStrictEqual(out.missing_paths, [{ id: 'news', path: 'scripts/gone.js' }]);
+  assert.deepStrictEqual(out.unowned, []);
+});
