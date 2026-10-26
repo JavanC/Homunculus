@@ -11,29 +11,40 @@
 
 ## Release Checklist
 
-Every public release must complete these steps in order:
+### Skill changes (`skills/`) — the normal case
 
-1. **Code changes** — implement the feature/fix
-2. **README.md** — update What's New section + any affected docs
-3. **i18n sync** — update `docs/zh-TW/README.md` and `docs/zh-CN/README.md` to match
-4. **package.json** — bump version (semver: patch/minor/major)
-5. **git commit + push (dev)**, then `scripts/release-public.sh`, review the diff, push the public checkout
-6. **npm publish** — `npm publish` from repo root
-7. **GitHub release** — `gh release create vX.Y.Z` with release notes
-8. **assistant plan.md** — sync `~/assistant/projects/homunculus/plan.md` if applicable
+Users install skills from the public repo (`npx skills add JavanC/Homunculus`), so a pushed public commit
+is the release. No version bump, no npm.
+
+1. **Code changes** — fix it here, never only in an installed copy of a skill: a reinstall overwrites the
+   installed copy and drops the fix.
+2. **Tests** — `node --test skills/*/tests/*.test.cjs` green.
+3. **Docs** — if behavior a user sees changed, update README.md and `docs/zh-TW/README.md`, `docs/zh-CN/README.md`.
+4. **git commit + push (dev)**, then `scripts/release-public.sh`, review the diff, push the public checkout.
+5. **Reinstall globally** — `npx -y skills add JavanC/Homunculus -g -y`; if the global skills folder is
+   version-controlled, commit it together with its `.skill-lock.json`.
+
+### Legacy npm CLI (`bin/`, `core/`, `commands/`, `templates/`) — frozen
+
+Only for a fix to existing CLI users. After steps 1–4 above: bump `package.json` (semver), `npm publish`
+from repo root, `gh release create vX.Y.Z` with release notes.
 
 ## Project Structure
 
-- `bin/` — CLI entry points (init, upgrade, night)
-- `core/` — Evolution scripts copied to user projects during init
-- `commands/` — Slash commands copied to `.claude/commands/` during init
-- `templates/` — CLAUDE.md, architecture.yaml, rules templates for init
+- `skills/` — purpose-tree, purpose-sync, purpose-review; each has `SKILL.md`, `scripts/*.cjs`, `tests/`
+- `bin/` — legacy CLI entry points (init, upgrade, night)
+- `core/` — legacy evolution scripts copied to user projects during init
+- `commands/` — legacy slash commands copied to `.claude/commands/` during init
+- `templates/` — legacy CLAUDE.md, architecture.yaml, rules templates for init
 - `docs/` — Long-form documentation
 - `examples/reference/` — Real-world reference implementation from the author's system
 
 ## Key Design Decisions
 
 - **Zero dependencies** — Only Node.js stdlib + Claude CLI
+- **Skill scripts are `.cjs`** — installed skills run inside host projects, some of which are ESM
+
+Legacy CLI only:
 - **File copy, not symlink** — init copies files so users can customize freely
 - **Manifest-based upgrade** — `.manifest.json` tracks SHA256 hashes for diff-aware upgrades
 - **Never touch user content** — upgrade never modifies CLAUDE.md, architecture.yaml, instincts, skills
