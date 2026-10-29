@@ -41,9 +41,14 @@ root:
   status:        active | paused | planned   # default active; retired nodes are deleted
   status_note:   Current state, known gaps
   paused_reason: Required when paused or planned: why, and how to resume
-  metrics:       [{name, source, healthy}]
+  metrics:                                   # list of block mappings, not {...}
+    - name: …
+      source: …
+      healthy: …
   tests:         [test file patterns]
-  health_check:  {command, expected}        # exit 0 = healthy
+  health_check:                              # exit 0 = healthy
+    command: …
+    expected: …
   realized_by:
     - scripts/capture.js                     # implementation
     - id: daily_awareness                    # sub-purpose: same node format, recursive
@@ -63,12 +68,16 @@ Blank starting tree: [templates/purpose-tree.yaml](templates/purpose-tree.yaml).
 
 ## Top-down rule
 
-1. The **human** sets the root and every upper purpose. You may draft them (each line labeled
-   with its source: a doc line or "inferred from code"), but never write or reword one the
-   human has not confirmed.
-2. You may **propose** lower purposes under an existing one; the human accepts or rejects.
+Two kinds of node, two kinds of authority:
+
+1. **Purposes** (the root and every sub-purpose, at any depth) belong to the human. You may
+   draft one — its wording, or a new, split, merged or removed purpose — with each line labeled
+   by its source (a doc line or "inferred from code"). The human confirms each by an explicit
+   answer. Never write or reword a purpose the human has not confirmed.
+2. **Implementations** (the strings in `realized_by`) are yours to propose; the human accepts
+   or rejects, and "accept all" covers them.
 3. A child must serve its parent. If you cannot say how, it does not belong there.
-4. Upper purposes change only in an explicit review — never as a side effect of daily work.
+4. Purposes change only in an explicit review — never as a side effect of daily work.
 
 ## Health rules
 

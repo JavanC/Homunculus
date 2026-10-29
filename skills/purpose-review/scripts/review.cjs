@@ -2,8 +2,9 @@
 'use strict';
 // review.cjs — collect the facts for a full purpose-tree review, or, with no tree, a
 // project inventory for bootstrapping one. Zero dependencies. Run at the repo root.
-// Usage: review.cjs [--run-checks] [--stale-days N]
-// Output: JSON on stdout. Exit 0 = ok, 3 = setup problem.
+// Usage: review.cjs [--run-checks] [--stale-days N] [--days N] [--sessions]
+// Output: JSON on stdout. Exit 0 = ok, 3 = setup problem, 4 = the tree does not parse
+// (stdout then carries `mode: unparseable` with the error and bootstrap facts).
 
 const fs = require('fs');
 const path = require('path');
@@ -14,7 +15,7 @@ if (!fs.existsSync(path.join(LIB, 'tree.cjs'))) {
   console.error('purpose-tree skill not found next to purpose-review. Install it: npx skills add JavanC/Homunculus');
   process.exit(3);
 }
-const { findTree, collectNodes, nodeHistory } = require(path.join(LIB, 'tree.cjs'));
+const { findTree, collectNodes, nodeHistory, pathTokens, resolve, featureAreas, mentions } = require(path.join(LIB, 'tree.cjs'));
 const { parseYaml, validate } = require(path.join(LIB, 'validate.cjs'));
 
 // Top-level entries that are project plumbing, not functionality.
@@ -64,44 +65,17 @@ function intentDocs() {
   return tracked().filter((f) => INTENT.test(f) && !f.includes('node_modules/'));
 }
 
-// Extensions that make a bare token count as a file path. Without one, a token must end in /
-// to count, so repo slugs (owner/name), hostnames and versions are not mistaken for paths.
-const FILE_EXT = /\.(c?js|mjs|jsx|tsx?|json|ya?ml|toml|md|txt|sh|zsh|bash|py|rb|go|rs|swift|kt|java|sql|html?|css|scss|plist|xml|env|lock|cfg|ini|csv|jsonl|svg|png|jpe?g)$/i;
+const COARSE_MIN_AREAS = 3;
 
-// Expand one {a,b} group per pass so core/x.{js,json} becomes two paths before splitting on commas.
-function expandBraces(s) {
-  const m = s.match(/^(.*?)(\S*)\{([^{}\s]*)\}(\S*)(.*)$/s);
-  if (!m) return [s];
-  return m[3].split(',').flatMap((alt) => expandBraces(m[1] + m[2] + alt + m[4] + m[5]));
-}
-
-// Path-like tokens in an implementation string: files with a known extension or directories
-// ending in /. Skips URLs, routes and slash commands (leading /), emails, globs, ~ paths outside
-// the repo, and versions.
-function pathTokens(impl, repoName = null) {
-  const out = [];
-  for (const piece of expandBraces(impl)) {
-    for (let t of piece.split(/[\s,()"'`]+/)) {
-      t = t.replace(/^\.\//, '').replace(/[;:.]+$/, '');
-      if (t.startsWith('~/')) {
-        const rest = t.split('/');
-        if (rest[1] !== repoName) continue;
-        t = rest.slice(2).join('/');
-      }
-      if (!t || t.startsWith('/') || t.startsWith('~') || /^[a-z][a-z0-9+.-]*:/i.test(t)) continue;
-      if (/[@*{}<>=]/.test(t) || /^v?\d[\d.]*$/.test(t)) continue;
-      if (t.endsWith('/') || FILE_EXT.test(t)) out.push(t);
-    }
+// The feature area a path belongs to: the second-level directory holding it when that is a
+// feature area (featureAreas: 3+ tracked files), else its top-level entry.
+function areaOf(p, level2) {
+  const parts = p.replace(/\/$/, '').split('/');
+  if (parts.length >= 2) {
+    const a = parts.slice(0, 2).join('/') + '/';
+    if (level2.has(a)) return a;
   }
-  return [...new Set(out)];
-}
-
-// The tracked file a token refers to: at the repo root, or (for tokens written relative to a
-// subdirectory, like twitter.sh under daily-news/sources/) the first tracked file ending in it.
-function resolve(t, files) {
-  const bare = t.replace(/\/$/, '');
-  if (fs.existsSync(bare)) return bare;
-  return files.find((f) => f.endsWith('/' + bare) || (t.endsWith('/') && f.includes('/' + t))) || null;
+  return parts.length > 1 || p.endsWith('/') ? parts[0] + '/' : p;
 }
 
 function arg(name) {
@@ -123,7 +97,8 @@ function main() {
   let doc;
   try { doc = parseYaml(fs.readFileSync(tree, 'utf8')); } catch (e) {
     console.error(`${tree}: ${e.message}`);
-    process.exit(3);
+    process.stdout.write(JSON.stringify({ mode: 'unparseable', tree, error: e.message, intent_docs: intentDocs(), inventory: inventory({ deep: true }) }, null, 2) + '\n');
+    process.exit(4);
   }
   const staleDays = Number(arg('--stale-days') || 60);
   const now = Date.now();
@@ -133,19 +108,52 @@ function main() {
 
   // Implementations whose paths are gone, and top-level entries no implementation mentions.
   const missing = [];
+  const coarse = [];
   const mentioned = new Set();
+  const hitsByNode = {};   // node id → resolved paths its implementations point at
+  const areasByNode = {};  // node id → feature areas those paths fall in
   const files = tracked();
+  const level2 = new Set([...new Set(files.filter((f) => f.includes('/')).map((f) => f.split('/')[0] + '/'))]
+    .flatMap((top) => featureAreas(top, files).map((a) => a.entry)));
   const repoName = path.basename(process.cwd());
   for (const n of nodes) {
     for (const impl of n.impls) {
       for (const t of pathTokens(impl, repoName)) {
         const hit = resolve(t, files);
-        if (hit) mentioned.add(hit.split('/')[0]);
-        else missing.push({ id: n.id, path: t });
+        if (!hit) { missing.push({ id: n.id, path: t }); continue; }
+        mentioned.add(hit.split('/')[0]);
+        (hitsByNode[n.id] ||= new Set()).add(hit);
+        const inner = t.endsWith('/') ? featureAreas(hit, files) : [];
+        const own = areasByNode[n.id] ||= new Set();
+        if (inner.length) inner.forEach((a) => own.add(a.entry));
+        else own.add(areaOf(hit, level2));
+        if (t.endsWith('/')) {
+          // A directory-level implementation holding several feature areas: a trigger to
+          // look at the node's structure, not by itself a reason to split it.
+          const areas = featureAreas(hit, files);
+          if (areas.length >= COARSE_MIN_AREAS) coarse.push({ id: n.id, path: t, areas });
+        }
       }
     }
   }
-  const unowned = inventory().filter((e) => !mentioned.has(e.entry.replace(/\/$/, '')));
+  const unowned = inventory({ deep: true }).filter((e) => !mentioned.has(e.entry.replace(/\/$/, '')));
+
+  // Structure signals for the purpose-structure pass. Triggers to look, not answers.
+  // An area that holds another area of the same node is not counted on its own.
+  const leaves = (a) => [...a].filter((x) => ![...a].some((y) => y !== x && y.startsWith(x)));
+  const spread = Object.entries(areasByNode)
+    .map(([id, a]) => ({ id, areas: leaves(a).sort() }))
+    .filter((e) => e.areas.length >= COARSE_MIN_AREAS);
+  const shared = [];
+  for (const parent of nodes) {
+    const kids = parent.subs.filter((id) => hitsByNode[id]);
+    for (let x = 0; x < kids.length; x++) {
+      for (let y = x + 1; y < kids.length; y++) {
+        const both = [...hitsByNode[kids[x]]].filter((h) => hitsByNode[kids[y]].has(h));
+        if (both.length) shared.push({ ids: [kids[x], kids[y]], paths: both.sort() });
+      }
+    }
+  }
 
   const stale = [];
   for (const n of nodes) {
@@ -169,6 +177,62 @@ function main() {
     checks.push(c);
   }
 
+  // Commits in the evidence window, grouped by the node whose implementations they touch.
+  const days = Number(arg('--days') || 30);
+  const sinceMs = now - days * 86400000;
+  const commitsByNode = {};
+  let log = '';
+  try { log = git(['log', `--since=${Math.floor(sinceMs / 1000)}`, '--reverse', '--no-renames', '--format=@@%H %ct %s', '--name-only']); } catch {}
+  let cur = null;
+  const flush = () => {
+    if (!cur) return;
+    const hit = nodes.filter((n) => cur.files.some((f) => f !== tree && n.impls.some((i) => mentions(i, f))));
+    for (const n of hit) {
+      const e = (commitsByNode[n.id] ||= { count: 0, first: null, last: null, subjects: [] });
+      const day = new Date(cur.time).toISOString().slice(0, 10);
+      e.count++;
+      e.first ||= day;
+      e.last = day;
+      if (e.subjects.length < 5) e.subjects.push(cur.subject);
+    }
+  };
+  for (const line of log.split('\n')) {
+    if (line.startsWith('@@')) {
+      flush();
+      const m = line.slice(2).match(/^(\S+) (\d+) ?(.*)$/);
+      cur = { hash: m[1], time: Number(m[2]) * 1000, subject: m[3], files: [] };
+    } else if (line.trim() && cur) cur.files.push(line.trim());
+  }
+  flush();
+
+  // Answered suggestions per node; a stale entry older than the stale threshold is asked again.
+  const reviewed = {};
+  for (const n of nodes) {
+    if (!Array.isArray(n.node.reviewed) || !n.node.reviewed.length) continue;
+    reviewed[n.id] = n.node.reviewed.map((r) => {
+      const age = Math.floor((now - Date.parse(String(r.on))) / 86400000);
+      return { ...r, reask: r.kind === 'stale' && Number.isFinite(age) && age >= staleDays };
+    });
+  }
+
+  // Depth and parent of each node, for the top-down order.
+  const shape = {};
+  (function walk(list, parent, depth) {
+    for (const n of list) {
+      shape[n.id] = { parent, depth };
+      walk(nodes.filter((m) => n.subs.includes(m.id)), n.id, depth + 1);
+    }
+  })(nodes.slice(0, 1), null, 0);
+
+  let sessions;
+  if (process.argv.includes('--sessions')) {
+    const roots = [process.cwd()];
+    try {
+      for (const l of git(['worktree', 'list', '--porcelain']).split('\n')) if (l.startsWith('worktree ')) roots.push(l.slice(9));
+    } catch {}
+    sessions = require('./sessions.cjs').sessionSignals({ roots: [...new Set(roots.map((r) => fs.realpathSync(r)))], sinceMs });
+  }
+
   const { errors, warnings } = validate(doc);
   const out = {
     mode: 'review',
@@ -177,10 +241,18 @@ function main() {
     warnings,
     nodes_without_implementation: nodes.filter((n) => n.means === 0).map((n) => n.id),
     missing_paths: missing,
+    coarse_implementations: coarse,
+    spread,
+    shared_implementations: shared,
     unowned,
     stale,
     stale_days: staleDays,
     health_checks: checks,
+    nodes: shape,
+    window_days: days,
+    commits_by_node: commitsByNode,
+    reviewed,
+    ...(sessions ? { session_signals: sessions } : {}),
   };
   process.stdout.write(JSON.stringify(out, null, 2) + '\n');
 }

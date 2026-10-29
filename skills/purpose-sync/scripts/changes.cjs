@@ -2,7 +2,8 @@
 'use strict';
 // changes.cjs — list what changed since the purpose tree was last synced, and which
 // nodes' realized_by mention each changed path. Zero dependencies. Run at the repo root.
-// Output: JSON on stdout. Exit 0 = ok, 2 = no tree here, 3 = setup problem.
+// Output: JSON on stdout. Exit 0 = ok, 2 = no tree here, 3 = setup problem
+// (skill missing, not git), 4 = the tree exists but does not parse.
 
 const fs = require('fs');
 const path = require('path');
@@ -28,20 +29,6 @@ function loadTreeLib() {
 const CHURN_DAYS = 30;
 const CHURN_MIN = 3;
 
-const norm = (p) => p.replace(/^\.\//, '').replace(/^~\/[^/]+\//, '');
-
-// Does this implementation string refer to the changed path?
-function mentions(impl, file) {
-  const f = norm(file);
-  return impl.split(/[\s,()"'`]+/).filter(Boolean).some((tok) => {
-    const t = norm(tok);
-    if (!t || !/[./]/.test(t)) return false;           // only path-like tokens
-    if (t === f || f.endsWith('/' + t)) return true;    // exact file (or repo-relative suffix)
-    if (t.endsWith('/') && f.startsWith(t)) return true; // directory prefix
-    return false;
-  });
-}
-
 function main() {
   if (tryGit(['rev-parse', '--is-inside-work-tree']) !== 'true') {
     console.error('Not inside a git repository.');
@@ -52,11 +39,11 @@ function main() {
   const lib = loadTreeLib();
   const tree = lib.findTree();
   if (!tree) process.exit(2);
-  const { parseYaml, collectNodes } = lib;
+  const { parseYaml, collectNodes, mentions, matchKind } = lib;
   let doc;
   try { doc = parseYaml(fs.readFileSync(tree, 'utf8')); } catch (e) {
     console.error(`${tree}: ${e.message}`);
-    process.exit(3);
+    process.exit(4);
   }
 
   const head = tryGit(['rev-parse', 'HEAD']);
@@ -88,12 +75,49 @@ function main() {
 
   const nodes = collectNodes(doc && doc.root);
 
+  // A path reached only through a directory prefix, inside a subdirectory that did not exist
+  // at base, is a coarse match: the directory may now hold work for another purpose.
+  const existedAtBase = (dir) => !base || tryGit(['cat-file', '-e', `${base}:${dir.replace(/\/$/, '')}`]) !== null;
+  function coarseSubdir(c, hit) {
+    if (c.from && hit.every((n) => n.impls.some((i) => mentions(i, c.from)))) return null; // a rename
+    let sub = null;
+    for (const n of hit) {
+      for (const i of n.impls) {
+        const k = matchKind(i, c.path);
+        if (k === 'exact') return null;
+        if (k !== 'prefix') continue;
+        for (const t of lib.pathTokens(i, null, { loose: true })) {
+          if (!t.endsWith('/') || !c.path.startsWith(t)) continue;
+          const rest = c.path.slice(t.length).split('/');
+          if (rest.length < 2) return null;                      // a file directly in the directory
+          const d = t + rest[0] + '/';
+          if (existedAtBase(d)) return null;
+          sub = sub || d;
+        }
+      }
+    }
+    return sub;
+  }
+
   const list = [...changes.values()].map((c) => {
     const hit = nodes.filter((n) => n.impls.some((i) => mentions(i, c.path) || (c.from && mentions(i, c.from))));
-    return { ...c, nodes: hit.map((n) => n.id) };
+    const out = { ...c, nodes: hit.map((n) => n.id) };
+    const sub = hit.length ? coarseSubdir(c, hit) : null;
+    if (sub) { out.match = 'coarse'; out.subdir = sub; }
+    return out;
   });
 
-  const touched = new Set(list.flatMap((c) => c.nodes));
+  // Every path changed by any commit in the range, plus uncommitted and untracked ones.
+  // Unlike the net diff above, a path changed and then reverted still appears.
+  const any = new Set(changes.keys());
+  if (base) {
+    for (const f of (tryGit(['log', '--format=', '--name-only', '--no-renames', `${base}..HEAD`]) || '').split('\n').filter(Boolean)) any.add(f);
+  }
+  for (const f of (head ? tryGit(['diff', '--name-only', '--no-renames', 'HEAD']) || '' : '').split('\n').filter(Boolean)) any.add(f);
+  any.delete(tree);
+  const touchedAny = [...any].sort().map((f) => ({ path: f, nodes: nodes.filter((n) => n.impls.some((i) => mentions(i, f))).map((n) => n.id) }));
+
+  const touched = new Set(touchedAny.flatMap((c) => c.nodes));
   const hist = touched.size ? lib.nodeHistory(tree, { windowDays: CHURN_DAYS }) : {};
   const churn = [...touched]
     .filter((id) => hist[id] && hist[id].recent_changes >= CHURN_MIN)
@@ -105,6 +129,7 @@ function main() {
     base_source: baseSource,
     head,
     changes: list,
+    touched_any: touchedAny,
     unmatched: list.filter((c) => c.nodes.length === 0).map((c) => c.path),
     nodes_without_implementation: nodes.filter((n) => n.means === 0).map((n) => n.id),
     churn,
@@ -113,4 +138,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { mentions };
+module.exports = { mentions: (impl, file) => loadTreeLib().mentions(impl, file) };

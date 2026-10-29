@@ -18,6 +18,7 @@ keys are allowed and ignored by the validator (projects may keep their own confi
 | `health_check` | no | `{command, expected}` | Shell command; exit 0 = healthy. |
 | `agents` | no | list | Legacy: agents serving this purpose. Prefer listing them in `realized_by`. |
 | `goals` | no | map | Legacy: `{id: node}` children. Read as sub-purposes. |
+| `reviewed` | no | list of block mappings | Suggestions a full review showed about this node, with the answer. Written by `purpose-review`; see below. |
 
 Any other field is an error, so typos surface.
 
@@ -48,6 +49,34 @@ The check judges the data the purpose depends on, not that a file exists.
 | `wc -l data.jsonl` | `test "$(wc -l < data.jsonl)" -gt 0` |
 
 The validator rejects a command that is only an existence or count probe.
+
+## `reviewed`: answered suggestions
+
+One entry per suggestion item `purpose-review` showed about the node, so the same
+suggestion is not raised again without new evidence. Block mappings only.
+
+| Field | Required | Meaning |
+|---|---|---|
+| `kind` | yes | `better_means`, `ticket`, `repeated_work`, `grow_children`, `split`, `merge`, or `stale` |
+| `said` | yes | One line: what was suggested. |
+| `answer` | yes | `declined` (rejected or unanswered), `kept` (confirmed, no change), or `accepted` |
+| `on` | yes | Date answered, `YYYY-MM-DD`. |
+| `evidence` | no | Paths, check, commits or sessions the item cited. |
+
+The same suggestion answered again updates its entry. A `stale` entry older than the stale
+threshold (60 days) is asked again. Health facts (validation errors, missing paths, failing
+checks) are never recorded here. The list moves with the node and goes when it is deleted.
+
+```yaml
+- id: trustworthy_data
+  purpose: Numbers can be trusted.
+  reviewed:
+    - kind: split
+      said: split into price vs attribution sources
+      answer: declined
+      on: 2026-10-29
+      evidence: src/price/, src/attribution/
+```
 
 ## Example
 

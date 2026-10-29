@@ -1,0 +1,18 @@
+version: "3.0"
+root:
+  purpose: Root.
+  realized_by:
+    - id: trustworthy_data
+      purpose: Numbers can be trusted.
+      realized_by:
+        - src/
+      reviewed:
+        - kind: split
+          said: split into price vs attribution sources
+          answer: declined
+          on: 2026-10-29
+          evidence: src/price/, src/attribution/
+        - kind: stale
+          said: purpose still true
+          answer: kept
+          on: 2026-10-29

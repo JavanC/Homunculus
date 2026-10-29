@@ -136,3 +136,123 @@ root:
   assert.deepStrictEqual(out.missing_paths, [{ id: 'news', path: 'scripts/gone.js' }]);
   assert.deepStrictEqual(out.unowned, []);
 });
+
+test('unparseable tree → exit 4 with mode unparseable and bootstrap facts', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', 'root:\n  realized_by:\n    - {id: x}\n'); r.write('README.md', '# x');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  let e;
+  try { execFileSync('node', [SCRIPT], { cwd: r.dir, stdio: 'pipe' }); } catch (x) { e = x; }
+  assert.strictEqual(e && e.status, 4);
+  const out = JSON.parse(e.stdout.toString());
+  assert.strictEqual(out.mode, 'unparseable');
+  assert.strictEqual(out.tree, 'purpose-tree.yaml');
+  assert.match(out.error, /flow mappings/);
+  assert.ok(out.intent_docs.includes('README.md'));
+});
+
+test('coarse_implementations: a directory implementation holding 3+ feature areas', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', `version: "3.0"
+root:
+  purpose: Root.
+  realized_by:
+    - id: analysis
+      purpose: Understand quotes.
+      realized_by:
+        - scripts/analysis/
+    - id: small
+      purpose: Small one.
+      realized_by:
+        - lib/
+`);
+  for (const a of ['gap', 'fill', 'route']) for (let i = 0; i < 3; i++) r.write(`scripts/analysis/${a}/f${i}.js`, '1');
+  r.write('scripts/analysis/thin/one.js', '1');                 // < 3 files: not an area
+  for (const a of ['x', 'y']) for (let i = 0; i < 3; i++) r.write(`lib/${a}/f${i}.js`, '1');   // only 2 areas
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const out = r.run();
+  assert.deepStrictEqual(out.coarse_implementations.map((c) => c.id), ['analysis']);
+  assert.deepStrictEqual(out.coarse_implementations[0].areas.map((a) => a.entry).sort(),
+    ['scripts/analysis/fill/', 'scripts/analysis/gap/', 'scripts/analysis/route/']);
+});
+
+test('commits_by_node, reviewed with stale re-ask, and node depth', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', `version: "3.0"
+root:
+  purpose: Root.
+  realized_by:
+    - id: brief
+      purpose: Morning.
+      realized_by:
+        - scripts/brief.js
+        - id: brief_mail
+          purpose: Mail it.
+          realized_by:
+            - scripts/mail.js
+      reviewed:
+        - kind: stale
+          said: purpose still true
+          answer: kept
+          on: 2026-01-01
+        - kind: split
+          said: split mail out
+          answer: declined
+          on: 2099-01-01
+`);
+  r.write('scripts/brief.js', '1'); r.write('scripts/mail.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.write('scripts/brief.js', '2'); r.sh('commit', '-qam', 'fix brief again');
+  r.write('scripts/brief.js', '3'); r.write('scripts/mail.js', '2'); r.sh('commit', '-qam', 'fix both');
+  r.write('purpose-tree.yaml', require('fs').readFileSync(path.join(r.dir, 'purpose-tree.yaml'), 'utf8') + '\n'); r.sh('commit', '-qam', 'tree only');
+  const out = r.run('--days', '30');
+  assert.strictEqual(out.window_days, 30);
+  assert.strictEqual(out.commits_by_node.brief.count, 3);
+  assert.deepStrictEqual(out.commits_by_node.brief.subjects, ['init', 'fix brief again', 'fix both']);
+  assert.strictEqual(out.commits_by_node.brief_mail.count, 2);
+  assert.ok(!Object.values(out.commits_by_node).some((e) => e.subjects.includes('tree only')));
+  assert.deepStrictEqual(out.reviewed.brief.map((e) => [e.kind, e.reask]), [['stale', true], ['split', false]]);
+  assert.strictEqual(out.reviewed.brief_mail, undefined);
+  assert.deepStrictEqual(out.nodes.brief_mail, { parent: 'brief', depth: 2 });
+  assert.deepStrictEqual(out.nodes.root, { parent: null, depth: 0 });
+  assert.strictEqual(out.session_signals, undefined);
+});
+
+test('structure signals: spread over 3+ areas, siblings sharing a path, unowned areas', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', `version: "3.0"
+root:
+  purpose: Root.
+  realized_by:
+    - id: wide
+      purpose: Does many things.
+      realized_by:
+        - src/sync/a.js
+        - src/auth/b.js
+        - src/billing/c.js
+    - id: nested
+      purpose: Not spread, only nested.
+      realized_by:
+        - scripts/one.js
+        - scripts/sub/two.js
+        - src/sync/d.js
+    - id: narrow
+      purpose: One thing.
+      realized_by:
+        - src/sync/a.js
+        - src/sync/d.js
+`);
+  for (const f of ['src/sync/a.js', 'src/sync/d.js', 'src/auth/b.js', 'src/billing/c.js']) r.write(f, '1');
+  for (const d of ['sync', 'auth', 'billing']) for (let i = 0; i < 3; i++) r.write(`src/${d}/pad${i}.js`, '1'); // each a feature area
+  r.write('scripts/one.js', '1'); r.write('scripts/sub/two.js', '1');   // nested, not a feature area
+  for (let i = 0; i < 3; i++) r.write(`tools/gen/f${i}.js`, '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const out = r.run();
+  assert.deepStrictEqual(out.spread, [{ id: 'wide', areas: ['src/auth/', 'src/billing/', 'src/sync/'] }]);
+  assert.deepStrictEqual(out.shared_implementations, [
+    { ids: ['wide', 'narrow'], paths: ['src/sync/a.js'] },
+    { ids: ['nested', 'narrow'], paths: ['src/sync/d.js'] },
+  ]);
+  const tools = out.unowned.find((e) => e.entry === 'tools/');
+  assert.deepStrictEqual(tools.areas, [{ entry: 'tools/gen/', files: 3 }]);
+});

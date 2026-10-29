@@ -144,3 +144,91 @@ test('churn: an untouched node is not flagged', () => {
   }
   assert.deepStrictEqual(r.run().out.churn, []);
 });
+
+test('touched_any keeps a path changed and reverted within the range', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const base = r.sh('rev-parse', 'HEAD');
+  r.write('purpose-tree.yaml', TREE + `last_synced: ${base}\n`); r.sh('commit', '-qam', 'sync');
+  r.write('scripts/brief.js', '2'); r.sh('commit', '-qam', 'change');
+  r.write('scripts/brief.js', '1'); r.sh('commit', '-qam', 'revert');
+  r.write('scripts/new.js', 'new');   // untracked, in a tracked dir
+  const { out } = r.run();
+  assert.ok(!out.changes.some((c) => c.path === 'scripts/brief.js'));
+  const by = Object.fromEntries(out.touched_any.map((c) => [c.path, c.nodes]));
+  assert.deepStrictEqual(by['scripts/brief.js'], ['brief']);
+  assert.deepStrictEqual(by['scripts/new.js'], []);
+  assert.ok(!('purpose-tree.yaml' in by));
+});
+
+test('touched_any lists both sides of a committed rename', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', 'same content here\n'.repeat(5));
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.sh('mv', 'scripts/brief.js', 'scripts/morning.js'); r.sh('commit', '-qm', 'rename');
+  const paths = r.run().out.touched_any.map((c) => c.path);
+  assert.ok(paths.includes('scripts/brief.js') && paths.includes('scripts/morning.js'));
+});
+
+test('unparseable tree → exit 4; not a git repo → exit 3', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', '---\nroot:\n\tpurpose: tabbed\n');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  assert.strictEqual(r.run().code, 4);
+  const plain = fs.mkdtempSync(path.join(os.tmpdir(), 'purpose-sync-nogit-'));
+  let code = 0;
+  try { execFileSync('node', [SCRIPT], { cwd: plain, stdio: 'pipe' }); } catch (e) { code = e.status; }
+  assert.strictEqual(code, 3);
+});
+
+test('mentions: pins current matching rules', () => {
+  const { mentions } = require(SCRIPT);
+  assert.ok(mentions('scripts/brief.js', 'scripts/brief.js'));             // exact
+  assert.ok(mentions('brief.js', 'scripts/brief.js'));                     // repo-relative suffix
+  assert.ok(mentions('app/reader/', 'app/reader/view.js'));                // dir prefix with /
+  assert.ok(!mentions('app/reader', 'app/reader/view.js'));                // no / → not a prefix
+  assert.ok(mentions('~/proj/scripts/x.js', 'scripts/x.js'));              // ~/<repo>/ stripped
+  assert.ok(mentions('bin/hm-night', 'bin/hm-night'));                     // extensionless file
+  assert.ok(mentions('cron job (scripts/brief.js)', 'scripts/brief.js'));  // inside prose
+  assert.ok(!mentions('morning brief job', 'scripts/brief.js'));           // prose only
+  assert.ok(!mentions('scripts/', 'other/scripts/x.js'));                  // prefix is from the root
+});
+
+const COARSE_TREE = `version: "3.0"
+root:
+  purpose: Root.
+  realized_by:
+    - id: analysis
+      purpose: Understand quote quality.
+      realized_by:
+        - scripts/analysis/
+`;
+
+test('coarse: a new subdirectory reached only by a dir prefix is marked', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', COARSE_TREE); r.write('scripts/analysis/old/a.js', '1'); r.write('scripts/analysis/top.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.write('scripts/analysis/rhQuoteGap/gap.js', 'new'); r.sh('add', '.'); r.sh('commit', '-qm', 'new area');
+  r.write('scripts/analysis/old/a.js', '2');   // existing subdir → not coarse
+  r.write('scripts/analysis/top.js', '2');     // directly in the dir → not coarse
+  const by = Object.fromEntries(r.run().out.changes.map((c) => [c.path, c]));
+  assert.strictEqual(by['scripts/analysis/rhQuoteGap/gap.js'].match, 'coarse');
+  assert.strictEqual(by['scripts/analysis/rhQuoteGap/gap.js'].subdir, 'scripts/analysis/rhQuoteGap/');
+  assert.deepStrictEqual(by['scripts/analysis/rhQuoteGap/gap.js'].nodes, ['analysis']);
+  assert.strictEqual(by['scripts/analysis/old/a.js'].match, undefined);
+  assert.strictEqual(by['scripts/analysis/top.js'].match, undefined);
+});
+
+test('coarse: an exact match or a rename is not marked', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', COARSE_TREE.replace('- scripts/analysis/', '- scripts/analysis/\n        - scripts/analysis/new/x.js'));
+  r.write('scripts/analysis/old/a.js', 'same content here\n'.repeat(5));
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.write('scripts/analysis/new/x.js', 'x');                                    // exact
+  r.sh('mv', 'scripts/analysis/old', 'scripts/analysis/moved');                 // rename
+  r.sh('add', '.'); r.sh('commit', '-qm', 'work');
+  const out = r.run().out;
+  assert.ok(out.changes.length >= 2);
+  assert.ok(out.changes.every((c) => c.match === undefined), JSON.stringify(out.changes));
+});

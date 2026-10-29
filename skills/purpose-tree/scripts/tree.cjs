@@ -1,6 +1,7 @@
 'use strict';
 // tree.cjs — shared helpers for skills that read a purpose tree: find it, walk its nodes,
-// and read each node's change history from git. Zero dependencies.
+// read each node's change history from git, and match implementation strings to paths.
+// Zero dependencies.
 
 const fs = require('fs');
 const { execFileSync } = require('child_process');
@@ -72,4 +73,76 @@ function nodeHistory(treeFile, { windowDays = 30, maxCommits = 300, now = Date.n
   return hist;
 }
 
-module.exports = { TREE_FILES, findTree, collectNodes, nodeHistory };
+// Extensions that make a bare token count as a file path. Without one, a token must end in /
+// to count, so repo slugs (owner/name), hostnames and versions are not mistaken for paths.
+const FILE_EXT = /\.(c?js|mjs|jsx|tsx?|json|ya?ml|toml|md|txt|sh|zsh|bash|py|rb|go|rs|swift|kt|java|sql|html?|css|scss|plist|xml|env|lock|cfg|ini|csv|jsonl|svg|png|jpe?g)$/i;
+
+// Expand one {a,b} group per pass so core/x.{js,json} becomes two paths before splitting on commas.
+function expandBraces(s) {
+  const m = s.match(/^(.*?)(\S*)\{([^{}\s]*)\}(\S*)(.*)$/s);
+  if (!m) return [s];
+  return m[3].split(',').flatMap((alt) => expandBraces(m[1] + m[2] + alt + m[4] + m[5]));
+}
+
+// Path-like tokens in an implementation string: files with a known extension or directories
+// ending in /. Skips URLs, routes and slash commands (leading /), emails, globs, ~ paths outside
+// the repo, and versions.
+// With loose, a token with a / or . also counts even without a known extension (bin/tool),
+// and a ~/<dir>/ prefix is dropped whatever <dir> is: right for matching changed paths,
+// where a false hit is cheap; wrong for reporting missing paths, where it is not.
+function pathTokens(impl, repoName = null, { loose = false } = {}) {
+  const out = [];
+  for (const piece of expandBraces(impl)) {
+    for (let t of piece.split(/[\s,()"'`]+/)) {
+      t = t.replace(/^\.\//, '').replace(/[;:.]+$/, '');
+      if (t.startsWith('~/')) {
+        const rest = t.split('/');
+        if (!loose && rest[1] !== repoName) continue;
+        t = rest.slice(2).join('/');
+      }
+      if (!t || t.startsWith('/') || t.startsWith('~') || /^[a-z][a-z0-9+.-]*:/i.test(t)) continue;
+      if (/[@*{}<>=]/.test(t) || /^v?\d[\d.]*$/.test(t)) continue;
+      if (t.endsWith('/') || FILE_EXT.test(t) || (loose && /[./]/.test(t))) out.push(t);
+    }
+  }
+  return [...new Set(out)];
+}
+
+// The tracked file a token refers to: at the repo root, or (for tokens written relative to a
+// subdirectory, like twitter.sh under daily-news/sources/) the first tracked file ending in it.
+function resolve(t, files) {
+  const bare = t.replace(/\/$/, '');
+  if (fs.existsSync(bare)) return bare;
+  return files.find((f) => f.endsWith('/' + bare) || (t.endsWith('/') && f.includes('/' + t))) || null;
+}
+
+// How an implementation string refers to a changed path: 'exact' (the file itself, or a
+// repo-relative suffix of it), 'prefix' (a directory ending in / that holds it), or null.
+function matchKind(impl, file) {
+  const f = file.replace(/^\.\//, '');
+  let kind = null;
+  for (const t of pathTokens(impl, null, { loose: true })) {
+    if (t === f || f.endsWith('/' + t)) return 'exact';
+    if (t.endsWith('/') && f.startsWith(t)) kind = 'prefix';
+  }
+  return kind;
+}
+const mentions = (impl, file) => matchKind(impl, file) !== null;
+
+// Feature areas inside a directory: its immediate subdirectories holding at least
+// `minFiles` tracked files each. Shared by the coarse-implementation check and the
+// purpose-structure pass.
+function featureAreas(dir, files, { minFiles = 3 } = {}) {
+  const d = dir.endsWith('/') ? dir : dir + '/';
+  const counts = new Map();
+  for (const f of files) {
+    if (!f.startsWith(d)) continue;
+    const rest = f.slice(d.length).split('/');
+    if (rest.length < 2) continue;
+    const a = d + rest[0] + '/';
+    counts.set(a, (counts.get(a) || 0) + 1);
+  }
+  return [...counts].filter(([, n]) => n >= minFiles).map(([entry, n]) => ({ entry, files: n }));
+}
+
+module.exports = { TREE_FILES, findTree, collectNodes, nodeHistory, pathTokens, resolve, matchKind, mentions, featureAreas };

@@ -10,8 +10,9 @@ const path = require('path');
 
 // ── Minimal YAML subset parser ────────────────────────────────────────────
 // Supports: block mappings, block sequences (of scalars or mappings), quoted and
-// plain scalars, flow sequences of scalars ([a, b]), empty flow {} / [],
-// folded/literal block scalars (> >- | |-), and # comments.
+// plain scalars (also over several lines), flow sequences of scalars ([a, b]),
+// empty flow {} / [], folded/literal block scalars (> >- | |-), # comments and a
+// leading --- marker. Flow mappings and tab indentation are errors, not guesses.
 
 function stripComment(s) {
   let q = null;
@@ -24,13 +25,29 @@ function stripComment(s) {
   return s;
 }
 
+// Split a flow sequence's body on commas that are outside quotes.
+function splitFlow(body) {
+  const out = [];
+  let q = null;
+  let cur = '';
+  for (const c of body) {
+    if (q) { if (c === q) q = null; cur += c; continue; }
+    if (c === '"' || c === "'") q = c;
+    if (c === ',') { out.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
 function scalar(raw) {
   const s = raw.trim();
   if (s === '' || s === '~' || s === 'null') return null;
   if (s === '{}') return {};
   if (s === '[]') return [];
+  if (s.startsWith('{')) throw new Error('flow mappings ({...}) are not supported; use block "key: value" lines');
   if (s.startsWith('[') && s.endsWith(']')) {
-    return s.slice(1, -1).split(',').map((x) => scalar(x)).filter((x) => x !== null);
+    return splitFlow(s.slice(1, -1)).map((x) => scalar(x)).filter((x) => x !== null);
   }
   if (s.length > 1 && s.startsWith('"') && s.endsWith('"')) {
     const esc = { n: '\n', t: '\t', '"': '"', '\\': '\\', '/': '/', r: '\r', '0': '\0' };
@@ -46,9 +63,12 @@ function scalar(raw) {
 function parseYaml(text) {
   const lines = [];
   text.split(/\r?\n/).forEach((raw, i) => {
+    if (/^ *\t/.test(raw) && raw.trim() !== '') throw new Error(`line ${i + 1}: tab in indentation; indent with spaces`);
     lines.push({ raw, n: i + 1 });
   });
   let i = 0;
+  while (i < lines.length && stripComment(lines[i].raw).trim() === '') i++;
+  if (i < lines.length && /^---\s*(#.*)?$/.test(lines[i].raw)) i++;
 
   const indentOf = (s) => s.match(/^ */)[0].length;
   const isBlank = (s) => stripComment(s).trim() === '';
@@ -78,7 +98,24 @@ function parseYaml(text) {
     const r = stripComment(rest).trim();
     if (r === '') { skipBlank(); return i < lines.length && indentOf(lines[i].raw) > indent ? node(indentOf(lines[i].raw)) : (i < lines.length && indentOf(lines[i].raw) === indent && lines[i].raw.trim().startsWith('- ') ? node(indent) : null); }
     if (/^[>|]-?$/.test(r)) return blockScalar(r, indent);
-    return scalar(r);
+    if (/^["'\[{]/.test(r)) return scalar(r);
+    return scalar(plainContinued(r, indent));
+  }
+
+  // A plain scalar may go on over more-indented lines; they fold into one line.
+  function plainContinued(first, indent) {
+    let out = first;
+    let j = i;
+    let gap = false;
+    while (j < lines.length) {
+      const t = stripComment(lines[j].raw).trim();
+      if (t === '') { gap = true; j++; continue; }
+      if (indentOf(lines[j].raw) <= indent) break;
+      out += (gap ? '\n' : ' ') + t;
+      gap = false;
+      i = j = j + 1;
+    }
+    return out;
   }
 
   function node(indent) {
@@ -143,8 +180,12 @@ function parseYaml(text) {
 
 const NODE_KEYS = new Set([
   'id', 'purpose', 'realized_by', 'status', 'status_note', 'paused_reason',
-  'metrics', 'tests', 'health_check', 'agents', 'goals',
+  'metrics', 'tests', 'health_check', 'agents', 'goals', 'reviewed',
 ]);
+// reviewed: one entry per suggestion item shown about the node, with the human's answer.
+const REVIEWED_KINDS = new Set(['better_means', 'ticket', 'repeated_work', 'grow_children', 'split', 'merge', 'stale']);
+const REVIEWED_ANSWERS = new Set(['declined', 'kept', 'accepted']);
+const REVIEWED_KEYS = new Set(['kind', 'said', 'answer', 'on', 'evidence']);
 const STATUSES = new Set(['active', 'paused', 'planned']);
 // A health_check that is only an existence/count probe passes on empty data.
 const WEAK_CHECK = /^\s*(test\s+-[efxsd]\s+\S+|\[\s+-[efxsd]\s+\S+\s+\]|ls\b[^|]*\|\s*head\b.*|wc\s+-l\b.*)\s*$/;
@@ -183,6 +224,19 @@ function validate(doc) {
       else if (WEAK_CHECK.test(String(hc.command))) {
         errors.push(`${where}: health_check only probes existence/count and passes on empty data: ${hc.command}`);
       }
+    }
+
+    if (n.reviewed !== undefined && n.reviewed !== null) {
+      if (!Array.isArray(n.reviewed)) errors.push(`${where}: reviewed must be a list`);
+      else n.reviewed.forEach((r, j) => {
+        const at = `${where}.reviewed[${j}]`;
+        if (!r || typeof r !== 'object' || Array.isArray(r)) { errors.push(`${at}: must be a mapping`); return; }
+        for (const k of Object.keys(r)) if (!REVIEWED_KEYS.has(k)) errors.push(`${at}: unknown field "${k}"`);
+        for (const k of ['kind', 'said', 'answer', 'on']) if (r[k] === undefined || r[k] === null || r[k] === '') errors.push(`${at}: missing ${k}`);
+        if (r.kind && !REVIEWED_KINDS.has(r.kind)) errors.push(`${at}: unknown kind "${r.kind}"`);
+        if (r.answer && !REVIEWED_ANSWERS.has(r.answer)) errors.push(`${at}: answer must be declined|kept|accepted (got "${r.answer}")`);
+        if (r.on && !/^\d{4}-\d{2}-\d{2}$/.test(String(r.on))) errors.push(`${at}: on must be YYYY-MM-DD (got "${r.on}")`);
+      });
     }
 
     const rb = n.realized_by;

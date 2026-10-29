@@ -30,3 +30,53 @@ test('template is valid', () => {
 test('missing file exits 2', () => {
   assert.strictEqual(run(path.join(FIX, 'does-not-exist.yaml')), 2);
 });
+
+const { parseYaml } = require(V);
+
+test('parser: a leading --- marker is accepted', () => {
+  assert.deepStrictEqual(parseYaml('---\nroot:\n  purpose: Why.\n'), { root: { purpose: 'Why.' } });
+});
+
+test('parser: a plain scalar over several lines folds into one', () => {
+  const doc = parseYaml('root:\n  purpose: Know what matters\n    before the day starts.\n  status: active\n');
+  assert.deepStrictEqual(doc.root, { purpose: 'Know what matters before the day starts.', status: 'active' });
+});
+
+test('parser: a flow mapping is an error, not a string', () => {
+  assert.throws(() => parseYaml('root:\n  realized_by:\n    - {id: x, purpose: y}\n'), /flow mappings/);
+});
+
+test('parser: tab indentation is an error', () => {
+  assert.throws(() => parseYaml('root:\n\tpurpose: Why.\n'), /line 2: tab/);
+});
+
+test('reviewed: missing fields, unknown kind/answer and bad date are errors', () => {
+  const { validate } = require(V);
+  const doc = parseYaml(`version: "3.0"
+root:
+  purpose: Root.
+  reviewed:
+    - kind: split
+      said: x
+    - kind: rename
+      said: x
+      answer: maybe
+      on: 29/10/2026
+    - kind: stale
+      said: x
+      answer: kept
+      on: 2026-10-29
+      why: extra
+`);
+  const errs = validate(doc).errors.join('\n');
+  assert.match(errs, /reviewed\[0\]: missing answer/);
+  assert.match(errs, /reviewed\[0\]: missing on/);
+  assert.match(errs, /reviewed\[1\]: unknown kind "rename"/);
+  assert.match(errs, /reviewed\[1\]: answer must be/);
+  assert.match(errs, /reviewed\[1\]: on must be YYYY-MM-DD/);
+  assert.match(errs, /reviewed\[2\]: unknown field "why"/);
+});
+
+test('parser: a comma inside a quoted flow-sequence item does not split it', () => {
+  assert.deepStrictEqual(parseYaml('a: ["x.js (gate, per account)", y.js]\n'), { a: ['x.js (gate, per account)', 'y.js'] });
+});
