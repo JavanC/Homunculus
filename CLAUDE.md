@@ -19,14 +19,17 @@ is the release. No version bump, no npm.
 1. **Code changes** — fix it here, never only in an installed copy of a skill: a reinstall overwrites the
    installed copy and drops the fix.
 2. **Tests** — `node --test skills/*/tests/*.test.cjs` green.
-3. **Docs** — if behavior a user sees changed, update README.md and `docs/zh-TW/README.md`, `docs/zh-CN/README.md`.
-4. **git commit + push (dev)**, then `scripts/release-public.sh`, review the diff, push the public checkout.
-5. **Reinstall globally** — `npx -y skills add JavanC/Homunculus -g -y`; if the global skills folder is
+3. **Docs** — if behavior a user sees changed, update README.md and `docs/zh-TW/README.md`, `docs/zh-CN/README.md`,
+   including a `### skills-YYYY-MM-DD` changelog entry (the release notes are read from it).
+4. **Review** the diff since the last release (Codex first, else a fresh-context Claude agent) and settle every finding.
+5. **git commit + push (dev)**, then `scripts/release-public.sh` (commits and tags `skills-YYYY-MM-DD`), review the
+   diff, then run the two commands it prints: `git push --follow-tags` and `gh release create` (users watch Releases).
+6. **Reinstall globally** — `npx -y skills add JavanC/Homunculus -g -y`; if the global skills folder is
    version-controlled, commit it together with its `.skill-lock.json`.
 
 ### Legacy npm CLI (`bin/`, `core/`, `commands/`, `templates/`) — frozen
 
-Only for a fix to existing CLI users. After steps 1–4 above: bump `package.json` (semver), `npm publish`
+Only for a fix to existing CLI users. After steps 1–5 above: bump `package.json` (semver), `npm publish`
 from repo root, `gh release create vX.Y.Z` with release notes.
 
 ## Project Structure

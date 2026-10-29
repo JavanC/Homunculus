@@ -26,6 +26,37 @@ One command. Define your goals. Your assistant starts evolving.
 
 ---
 
+## Skills (current)
+
+Homunculus is now a set of three agent skills. The npm CLI described further down is legacy.
+
+| Skill | What it does | When it runs |
+|---|---|---|
+| `purpose-tree` | The method: a tree of purposes (why each part exists), each realized by implementations (what does it now). Includes a validator. | Read by the other two |
+| `purpose-sync` | At the end of a session, proposes `realized_by` updates for the code that changed, and flags changes that serve no purpose. When there is no proposal, gap or review item it asks nothing and prints only a one-line summary. | Session end, or "sync the purpose tree" |
+| `purpose-review` | Builds a first tree for a project that has none, or reviews the whole tree: gaps, missing paths, stale nodes, failing health checks, better ways to realize a purpose, and purposes that should split, merge or grow children. A review is one list, top down, at most 10 items. | Only when you ask ("review the purpose tree") |
+
+Purposes, at any level, change only when you confirm them; the AI proposes implementations. Answers to review suggestions are kept under each node's `reviewed`, so the same suggestion is not asked again.
+
+**Privacy.** `purpose-review --sessions` is off by default. When you ask for repeated-work detection, it reads this machine's Claude Code transcripts for the repo (`~/.claude/projects/`) and keeps only the first line of each request (up to 120 characters) and each command's name (plus the subcommand for tools such as `git` or `npm`), with secrets, emails and handles replaced. That text goes to the AI model as tool output, like any file it reads; the skill stores and sends nothing else. Pattern-based redaction can miss a secret.
+
+**Install**
+
+```bash
+npx skills add JavanC/Homunculus          # this project
+npx skills add JavanC/Homunculus -g       # all projects
+```
+
+**Update.** A release is a commit on `main` of this repo, tagged `skills-YYYY-MM-DD`. The skills CLI does not notify you, so update now and then:
+
+```bash
+npx skills update -g      # global installs; -p for project installs
+```
+
+To hear about new releases, watch this repo on GitHub with **Watch → Custom → Releases**. Each release lists what changed.
+
+---
+
 ## Why
 
 Every Claude Code power user hits the same wall:
@@ -167,7 +198,13 @@ The evolution engine then:
 
 ## What's New
 
-### Unreleased — Moving to a Skill Collection
+### skills-2026-10-30
+
+- **purpose-review** — improvement pass (better means, findings to tickets, repeated work with `--sessions`), purpose-structure pass (grow children, split, merge), one top-down list of at most 10 items, answered suggestions recorded under `reviewed`; unowned entries already decided in a `status_note` are no longer raised
+- **purpose-sync** — silent when nothing changed; a tree that does not parse is skipped with one line instead of stopping the session end; directory-only matches inside a new subdirectory are asked about
+- **purpose-tree** — the rule is now purposes (any level, human-confirmed) vs implementations (AI-proposed); the validator rejects tabs, flow mappings and mis-indented keys, and checks `reviewed`
+
+### Earlier — Moving to a Skill Collection
 
 - **Direction change** — Homunculus is being rebuilt as a skill collection centered on the purpose-tree method: `purpose-tree` (the method), `purpose-sync` (session-end sync and review), `purpose-review` (build or review a tree). Install: `npx skills add JavanC/Homunculus`
 - **npm CLI is now legacy** — `bin/`, `core/`, the nightly agent, and instincts are frozen: kept and working, but no new development, and new skills will not depend on them

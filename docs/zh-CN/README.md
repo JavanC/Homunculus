@@ -25,6 +25,37 @@ npx homunculus-code init
 
 ---
 
+## Skills（当前版本）
+
+Homunculus 现在是三个 agent skill。下方介绍的 npm CLI 是旧版。
+
+| Skill | 做什么 | 什么时候运行 |
+|---|---|---|
+| `purpose-tree` | 方法本身：一棵目的树（每个部分为什么存在），每个目的由实现（现在由什么完成）来达成。附 validator。 | 另外两个 skill 会读取它 |
+| `purpose-sync` | 收尾时，针对本次改动的代码提议 `realized_by` 的更新，并标出不服务任何目的的改动。没有提议、缺口或审视项时不会提问，只输出一行摘要。 | 收尾时，或说"同步目的树" |
+| `purpose-review` | 为还没有目的树的项目建第一棵树，或审查整棵树：缺口、不存在的路径、长期未更新的节点、失败的 health check、更好的实现方式，以及该拆分、合并或长出子目的的节点。审查时是一份自上而下、最多 10 项的清单。 | 只在你要求时（"审查目的树"） |
+
+任何层级的目的都只有在你确认后才会改；AI 只提议实现。你对 review 建议的回答会记录在各节点的 `reviewed`，同样的建议不会再问一次。
+
+**隐私。** `purpose-review --sessions` 默认关闭。你要求查找"重复的手动工作"时，它会读取本机上这个 repo 的 Claude Code transcript（`~/.claude/projects/`），只保留每个请求的第一行（最多 120 个字符）和每个命令的名称（`git`、`npm` 这类工具会多保留子命令），并替换掉密钥、邮箱和账号代号。这些文本会以工具输出的形式交给 AI 模型，就像它读取任何文件一样；skill 本身不存储、也不发送其他内容。基于模式匹配的脱敏仍可能漏掉密钥。
+
+**安装**
+
+```bash
+npx skills add JavanC/Homunculus          # 当前项目
+npx skills add JavanC/Homunculus -g       # 所有项目
+```
+
+**更新。** 每次发布是这个 repo `main` 上的一个 commit，并打上 `skills-YYYY-MM-DD` tag。skills CLI 不会通知你，请不定期更新：
+
+```bash
+npx skills update -g      # 全局安装；项目内安装用 -p
+```
+
+想在有新版本时收到通知：在 GitHub 上对这个 repo 设置 **Watch → Custom → Releases**。每个 Release 都会列出改了什么。
+
+---
+
 ## 为什么需要它
 
 每个 Claude Code 资深用户都会遇到同样的瓶颈：
@@ -166,7 +197,13 @@ continuous_evolution:
 
 ## 更新日志
 
-### 未发布 — 转为 Skill 集合
+### skills-2026-10-30
+
+- **purpose-review** — 新增改进建议（更好的实现方式、发现转为工单、配合 `--sessions` 查找重复工作）与结构建议（长出子目的、拆分、合并）；一份自上而下、最多 10 项的清单；回答过的建议记录在 `reviewed`；已在 `status_note` 中决定过的未归属条目不再重复提出
+- **purpose-sync** — 没有变动就不出声；目的树解析失败时只输出一行并跳过，不再阻塞收尾；仅靠目录匹配、又位于新子目录中的改动会询问
+- **purpose-tree** — 规则改为目的（任何层级，由人确认）vs 实现（由 AI 提议）；validator 会拒绝 tab 缩进、flow mapping 和缩进错误的 key，并检查 `reviewed`
+
+### 更早 — 转为 Skill 集合
 
 - **方向调整** — Homunculus 正在以目的树方法为核心，重建为一组 skill：`purpose-tree`（方法本身）、`purpose-sync`（收尾同步与审视）、`purpose-review`（建树或审树）。安装：`npx skills add JavanC/Homunculus`
 - **npm CLI 转为 legacy** — `bin/`、`core/`、夜间 agent、instinct 已冻结：保留可用，但不再开发，新的 skill 不会依赖它们
