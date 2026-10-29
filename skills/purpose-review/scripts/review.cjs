@@ -22,7 +22,7 @@ const { parseYaml, validate } = require(path.join(LIB, 'validate.cjs'));
 const PLUMBING = /^(\..*|README.*|LICENSE.*|CHANGELOG.*|CONTRIBUTING.*|[^/]+\.md|package\.json|pyproject\.toml|setup\.(py|cfg)|requirements.*\.txt|Cargo\.toml|go\.mod|Gemfile|tsconfig.*\.json|Makefile|package-lock\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb|Cargo\.lock|go\.sum|Gemfile\.lock|poetry\.lock|node_modules|docs|tests?|__tests__|spec)$/i;
 
 function git(args) {
-  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  return execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 512 * 1024 * 1024 }).trim();
 }
 
 function tracked() {
@@ -189,8 +189,10 @@ function main() {
   const days = Number(arg('--days') || 30);
   const sinceMs = now - days * 86400000;
   const commitsByNode = {};
+  // \x01 marks a commit line: git quotes control characters in file names, so no path starts with it.
   let log = '';
-  try { log = git(['log', `--since=${Math.floor(sinceMs / 1000)}`, '--reverse', '--no-renames', '--format=@@%H %ct %s', '--name-only']); } catch {}
+  let commitsError = null;
+  try { log = git(['log', `--since=${Math.floor(sinceMs / 1000)}`, '--reverse', '--no-renames', '--format=%x01%H %ct %s', '--name-only']); } catch (e) { commitsError = e.message.split('\n')[0]; }
   let cur = null;
   const flush = () => {
     if (!cur) return;
@@ -205,9 +207,9 @@ function main() {
     }
   };
   for (const line of log.split('\n')) {
-    if (line.startsWith('@@')) {
+    if (line.startsWith('\x01')) {
       flush();
-      const m = line.slice(2).match(/^(\S+) (\d+) ?(.*)$/);
+      const m = line.slice(1).match(/^(\S+) (\d+) ?(.*)$/);
       cur = { hash: m[1], time: Number(m[2]) * 1000, subject: m[3], files: [] };
     } else if (line.trim() && cur) cur.files.push(line.trim());
   }
@@ -217,16 +219,20 @@ function main() {
   const reviewed = {};
   for (const n of nodes) {
     if (!Array.isArray(n.node.reviewed) || !n.node.reviewed.length) continue;
-    reviewed[n.id] = n.node.reviewed.map((r) => {
+    reviewed[n.id] = n.node.reviewed.filter((r) => r && typeof r === 'object').map((r) => {
       const age = Math.floor((now - Date.parse(String(r.on))) / 86400000);
       return { ...r, reask: r.kind === 'stale' && Number.isFinite(age) && age >= staleDays };
     });
   }
 
   // Depth and parent of each node, for the top-down order.
+  // A duplicate id is a validation problem; `seen` keeps it from recursing forever.
   const shape = {};
+  const seen = new Set();
   (function walk(list, parent, depth) {
     for (const n of list) {
+      if (seen.has(n)) continue;
+      seen.add(n);
       shape[n.id] = { parent, depth };
       walk(nodes.filter((m) => n.subs.includes(m.id)), n.id, depth + 1);
     }
@@ -258,7 +264,8 @@ function main() {
     health_checks: checks,
     nodes: shape,
     window_days: days,
-    commits_by_node: commitsByNode,
+    commits_by_node: commitsError ? null : commitsByNode,
+    ...(commitsError ? { commits_error: commitsError } : {}),
     reviewed,
     ...(sessions ? { session_signals: sessions } : {}),
   };

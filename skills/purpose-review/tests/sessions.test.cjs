@@ -111,3 +111,26 @@ test('host-written text in the user turn is not a request', () => {
   ] });
   assert.deepStrictEqual(sessionSignals({ roots: [ROOT], sinceMs: SINCE, dir }).sessions[0].requests, ['push it']);
 });
+
+test('review fixes: keys never pass as subcommands; JSON and quoted secret values', () => {
+  assert.deepStrictEqual(commandShapes('echo sk-abcdefghijklmnopqrstu'), ['echo']);
+  assert.deepStrictEqual(commandShapes('git commit -m x'), ['git commit']);
+  assert.ok(!redact('{"password": "hunter2"}').includes('hunter2'));
+  assert.ok(!redact('password="two words"').includes('words'));
+  assert.ok(!redact(String.raw`{"password":"prefix\" confidential tail"}`).includes('tail'));
+  assert.deepStrictEqual(commandShapes('echo privatepassword'), ['echo']);
+  assert.deepStrictEqual(commandShapes('npx some-private-pkg'), ['npx']);
+  assert.ok(!redact("password='it''s x'").includes('s x'));
+  assert.ok(!redact('password="unterminated \\" tail').includes('tail'));
+  assert.deepStrictEqual(commandShapes('git credential-cache--daemon /tmp/socket'), ['git credential-cache--daemon']);
+  assert.deepStrictEqual(commandShapes('git rev-parse HEAD'), ['git rev-parse']);
+});
+
+test('review fixes: an unknown user message format is unsupported, not zero sessions', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'sess-fmt-'));
+  const root = '/r/x';
+  fs.mkdirSync(path.join(dir, '-r-x'));
+  fs.writeFileSync(path.join(dir, '-r-x', 'a.jsonl'), JSON.stringify({ type: 'user', sessionId: 's', cwd: root, timestamp: new Date().toISOString(), message: { content: { new_format: 'run deploy' } } }) + '\n');
+  const out = sessionSignals({ roots: [root], sinceMs: 0, dir });
+  assert.strictEqual(out.supported, false);
+});

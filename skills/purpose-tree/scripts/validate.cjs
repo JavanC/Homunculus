@@ -18,7 +18,11 @@ function stripComment(s) {
   let q = null;
   for (let i = 0; i < s.length; i++) {
     const c = s[i];
-    if (q) { if (c === q) q = null; continue; }
+    if (q) {
+      if (q === '"' && c === '\\') i++;
+      else if (c === q) q = null;
+      continue;
+    }
     if (c === '"' || c === "'") q = c;
     else if (c === '#' && (i === 0 || /\s/.test(s[i - 1]))) return s.slice(0, i);
   }
@@ -29,9 +33,16 @@ function stripComment(s) {
 function splitFlow(body) {
   const out = [];
   let q = null;
+  let esc = false;
   let cur = '';
   for (const c of body) {
-    if (q) { if (c === q) q = null; cur += c; continue; }
+    if (q) {
+      if (esc) esc = false;
+      else if (q === '"' && c === '\\') esc = true;
+      else if (c === q) q = null;
+      cur += c;
+      continue;
+    }
     if (c === '"' || c === "'") q = c;
     if (c === ',') { out.push(cur); cur = ''; continue; }
     cur += c;
@@ -111,6 +122,8 @@ function parseYaml(text) {
       const t = stripComment(lines[j].raw).trim();
       if (t === '') { gap = true; j++; continue; }
       if (indentOf(lines[j].raw) <= indent) break;
+      // A deeper "key: value" line is a mis-indented mapping, not more text.
+      if (/^[^\s"'#-][^:]*:(\s|$)/.test(t)) throw new Error(`line ${lines[j].n}: unexpected indent`);
       out += (gap ? '\n' : ' ') + t;
       gap = false;
       i = j = j + 1;

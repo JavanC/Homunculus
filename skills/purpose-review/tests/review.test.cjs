@@ -266,3 +266,13 @@ root:
   const tools = out.unowned.find((e) => e.entry === 'tools/');
   assert.deepStrictEqual(tools.areas, [{ entry: 'tools/gen/', files: 3 }]);
 });
+
+test('review fixes: bad reviewed entries and duplicate ids do not crash; @@ file names are files', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE.replace('      paused_reason: later', '      paused_reason: later\n      reviewed:\n        -\n      realized_by:\n        - id: empty_one\n          purpose: dup\n          realized_by: [scripts/brief.js]'));
+  r.write('scripts/brief.js', '1'); r.write('@@oops.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const out = r.run();
+  assert.ok(out.problems.length > 0);
+  assert.ok(out.commits_by_node.brief.count >= 1);
+});

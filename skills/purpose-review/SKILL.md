@@ -77,8 +77,8 @@ Turn the facts into items. Skip anything with nothing to say.
 | `nodes_without_implementation` | Gap: build something, mark it `planned` with a `paused_reason`, or delete the purpose. |
 | `coarse_implementations` | One directory realizes a node but holds 3+ feature areas. Look at whether the areas serve different whys; if they all serve this purpose, say nothing. Not by itself a reason to split. Any other item about the same node joins this one. |
 | `unowned` | Gap: which purpose does this serve? If none, should it exist? An entry with `noted_by` is already named in those nodes' `status_note` or `paused_reason`: read the note first. If it records a decision, raise nothing; raise it only if the note is out of date or the decision was never carried out. |
-| `stale` (paused/planned) | Resume, keep with an updated reason, or delete. |
-| `stale` (active) | Is this purpose still true? |
+| `stale` (paused/planned) | Resume, keep with an updated reason, or delete. Skip it if `reviewed` has a `stale` entry without `reask`. |
+| `stale` (active) | Is this purpose still true? Skip it if `reviewed` has a `stale` entry without `reask`. |
 | `health_checks` with non-zero `exit` | The purpose is not being met, or the check is wrong. Say which you think. |
 | `health_checks` that pass | Would it fail if its data were empty? If not, it is a false green: propose a stronger check. |
 
@@ -90,7 +90,7 @@ suggestion.
 
 After the facts, look for **suggestions**: changes nobody asked for that would serve a purpose
 better. Evidence comes only from the last `window_days` (default 30, `--days N`);
-`commits_by_node` lists each node's commits in that window. A review run less than monthly
+`commits_by_node` lists each node's commits in that window. It is `null` with `commits_error` when git log failed: say the commit evidence is unavailable, never "no commits". A review run less than monthly
 may miss some.
 
 | Kind | Raise it when | Item |
@@ -166,7 +166,8 @@ repeats".
    ```
 
    If an entry for the same suggestion exists, update its `answer` and `on` instead of
-   adding one. Health facts and held items are not recorded.
+   adding one. Health facts and held items are not recorded, except a `stale` answer:
+   record it as `kind: stale`, so the node is asked again only after the stale threshold.
 3. Validate. Never leave an invalid tree:
 
    ```bash

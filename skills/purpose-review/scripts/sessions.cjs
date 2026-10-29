@@ -27,7 +27,7 @@ const SECRETS = [
   /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/g, // JWT
   /\b[A-Fa-f0-9]{32,}\b/g,                                           // long hex
   /\b(?=[A-Za-z0-9+/_-]*\d[A-Za-z0-9+/_-]*\d)(?=[A-Za-z0-9+/_-]*[A-Z][A-Za-z0-9+/_-]*[A-Z])(?=[A-Za-z0-9+/_-]*[a-z])[A-Za-z0-9+/_-]{32,}={0,2}/g, // long mixed-case token (not a path)
-  /\b(password|passwd|secret|token|api[_-]?key)\s*[=:]\s*\S+/gi,     // key=value
+  /["']?\b(password|passwd|secret|token|api[_-]?key)["']?\s*[=:]\s*("(?:\\.|[^"\\])*"|'(?:''|[^'])*'|["'][^\n]*|\S+)/gi, // key=value, also JSON and quoted values
 ];
 function redact(s) {
   return SECRETS.reduce((acc, re) => acc.replace(re, '[redacted]'), s);
@@ -52,6 +52,10 @@ function requestLine(content) {
 // not commands.
 const SHELL_WORDS = new Set(['while', 'until', 'do', 'done', 'if', 'then', 'elif', 'else', 'fi', 'esac', '{', '}', '!', 'time']);
 const LOOP_HEADS = new Set(['for', 'case', 'select']);
+// Tools whose second word is a subcommand. For any other command the second word is an
+// argument (possibly private), so only the command name is kept.
+const SUBCOMMAND_TOOLS = new Set(['git', 'gh', 'npm', 'pnpm', 'yarn', 'bun', 'docker', 'kubectl', 'cargo', 'go',
+  'brew', 'launchctl', 'gcloud', 'aws', 'az', 'terraform', 'pip', 'uv', 'poetry', 'claude', 'codex', 'systemctl']);
 function commandShapes(cmd) {
   const text = String(cmd)
     .replace(/<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2[ \t]*(?=\n|$)/g, '')
@@ -63,8 +67,8 @@ function commandShapes(cmd) {
     if (!toks.length || LOOP_HEADS.has(toks[0])) continue;
     let name = path.basename(toks[0]);
     if (!/^[A-Za-z_][\w.+-]*$/.test(name)) continue;
-    if (toks[1] && /^[a-z][a-z0-9-]*$/.test(toks[1])) name += ' ' + toks[1];
-    out.push(name);
+    if (SUBCOMMAND_TOOLS.has(name) && toks[1] && /^[a-z][a-z0-9-]*$/.test(toks[1]) && redact(toks[1]) === toks[1]) name += ' ' + toks[1];
+    out.push(redact(name));
   }
   return out;
 }
@@ -84,6 +88,8 @@ function sessionSignals({ roots, sinceMs, dir = process.env.PURPOSE_REVIEW_TRANS
   const versions = new Set();
   let lines = 0;
   let understood = 0;
+  let userLines = 0;
+  let userRead = 0;
   for (const d of dirs) {
     const full = path.join(dir, d);
     if (!fs.statSync(full).isDirectory()) continue;
@@ -110,6 +116,8 @@ function sessionSignals({ roots, sinceMs, dir = process.env.PURPOSE_REVIEW_TRANS
         if (!s.date || day < s.date) s.date = day;
         const content = o.message && o.message.content;
         if (o.type === 'user' && !o.isMeta && !o.isSidechain) {
+          userLines++;
+          if (typeof content === 'string' || Array.isArray(content)) userRead++;
           const r = requestLine(content);
           if (r) s.requests.push(r);
         } else if (o.type === 'assistant' && Array.isArray(content)) {
@@ -122,6 +130,7 @@ function sessionSignals({ roots, sinceMs, dir = process.env.PURPOSE_REVIEW_TRANS
     }
   }
   if (lines > 0 && understood === 0) return { supported: false, reason: 'transcript format not recognised' };
+  if (userLines > 0 && userRead === 0) return { supported: false, reason: 'user message format not recognised' };
   // Scheduled and scripted runs (claude -p, the SDK) are automation already, not manual work
   // to spot: leave them out, and say how many.
   const all = [...sessions.values()].filter((s) => s.requests.length || s.commands.length);

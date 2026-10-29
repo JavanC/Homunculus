@@ -80,3 +80,14 @@ root:
 test('parser: a comma inside a quoted flow-sequence item does not split it', () => {
   assert.deepStrictEqual(parseYaml('a: ["x.js (gate, per account)", y.js]\n'), { a: ['x.js (gate, per account)', 'y.js'] });
 });
+
+test('review fixes: mis-indented key, escaped quotes in flow, @-segment paths', () => {
+  const { parseYaml } = require(V);
+  assert.throws(() => parseYaml('root:\n  purpose: Why\n    status: paused\n'), /line 3: unexpected indent/);
+  assert.deepStrictEqual(parseYaml('root:\n  purpose: Why\n    and more\n').root.purpose, 'Why and more');
+  assert.strictEqual(parseYaml('a: ["say \\"hi, there\\"", y.js]\n').a.length, 2);
+  assert.strictEqual(parseYaml('a: ["say \\" # hi, there\\"", y.js]\n').a.length, 2);
+  const t = require(path.join(__dirname, '..', 'scripts', 'tree.cjs'));
+  assert.strictEqual(t.matchKind('src/@types/', 'src/@types/a.ts'), 'prefix');
+  assert.deepStrictEqual(t.pathTokens('ops@host.local and pkg@1.2/x.js', 'r'), []);
+});

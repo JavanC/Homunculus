@@ -101,7 +101,8 @@ function pathTokens(impl, repoName = null, { loose = false } = {}) {
         t = rest.slice(2).join('/');
       }
       if (!t || t.startsWith('/') || t.startsWith('~') || /^[a-z][a-z0-9+.-]*:/i.test(t)) continue;
-      if (/[@*{}<>=]/.test(t) || /^v?\d[\d.]*$/.test(t)) continue;
+      // @ inside a segment is an email or pkg@version; at a segment start (@types/) it is a path.
+      if (/[*{}<>=]/.test(t) || /[^/]@/.test(t) || /^v?\d[\d.]*$/.test(t)) continue;
       if (t.endsWith('/') || FILE_EXT.test(t) || (loose && /[./]/.test(t))) out.push(t);
     }
   }
