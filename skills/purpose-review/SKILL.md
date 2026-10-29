@@ -76,7 +76,7 @@ Turn the facts into items. Skip anything with nothing to say.
 | `missing_paths` | The implementation is gone: update `realized_by`, or flag the node as a gap. |
 | `nodes_without_implementation` | Gap: build something, mark it `planned` with a `paused_reason`, or delete the purpose. |
 | `coarse_implementations` | One directory realizes a node but holds 3+ feature areas. Look at whether the areas serve different whys; if they all serve this purpose, say nothing. Not by itself a reason to split. Any other item about the same node joins this one. |
-| `unowned` | Gap: which purpose does this serve? If none, should it exist? |
+| `unowned` | Gap: which purpose does this serve? If none, should it exist? An entry with `noted_by` is already named in those nodes' `status_note` or `paused_reason`: read the note first. If it records a decision, raise nothing; raise it only if the note is out of date or the decision was never carried out. |
 | `stale` (paused/planned) | Resume, keep with an updated reason, or delete. |
 | `stale` (active) | Is this purpose still true? |
 | `health_checks` with non-zero `exit` | The purpose is not being met, or the check is wrong. Say which you think. |

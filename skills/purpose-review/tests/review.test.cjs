@@ -92,6 +92,16 @@ test('non-ASCII file names are not split into a separate quoted entry', () => {
   assert.strictEqual(unowned[0].files, 1);
 });
 
+test('unowned entries named in a status_note or paused_reason carry noted_by', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE.replace('      paused_reason: later', '      paused_reason: "move app/ out of git first"')
+    .replace('    - id: brief\n', '    - id: brief\n      status_note: "vendor stays here; myapp is unrelated"\n'));
+  for (const f of ['scripts/brief.js', 'app/x.js', 'vendor/y.js', 'my/z.js']) r.write(f, '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  const by = Object.fromEntries(r.run().unowned.map((e) => [e.entry, e.noted_by]));
+  assert.deepStrictEqual(by, { 'app/': ['empty_one'], 'vendor/': ['brief'], 'my/': undefined });
+});
+
 test('--run-checks records a failing health check', () => {
   const r = repo();
   r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', '1');

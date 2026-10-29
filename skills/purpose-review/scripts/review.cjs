@@ -136,7 +136,15 @@ function main() {
       }
     }
   }
-  const unowned = inventory({ deep: true }).filter((e) => !mentioned.has(e.entry.replace(/\/$/, '')));
+  // An entry a node's status_note or paused_reason already names was decided on: say which
+  // node, so the agent reads that note instead of asking again.
+  const notes = nodes.map((n) => ({ id: n.id, text: [n.node.status_note, n.node.paused_reason].filter(Boolean).join('\n') }));
+  const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const unowned = inventory({ deep: true }).filter((e) => !mentioned.has(e.entry.replace(/\/$/, ''))).map((e) => {
+    const re = new RegExp(`(^|[^\\w./-])${esc(e.entry.replace(/\/$/, ''))}(/|(?![\\w.-]))`);
+    const by = notes.filter((n) => re.test(n.text)).map((n) => n.id);
+    return by.length ? { ...e, noted_by: by } : e;
+  });
 
   // Structure signals for the purpose-structure pass. Triggers to look, not answers.
   // An area that holds another area of the same node is not counted on its own.
