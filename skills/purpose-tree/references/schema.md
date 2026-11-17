@@ -1,7 +1,13 @@
 # Purpose Tree Schema v3.0
 
 A tree file has two top-level keys: `version: "3.0"` and `root` (a node). Other top-level
-keys are allowed and ignored by the validator (projects may keep their own config there).
+keys are allowed and ignored by the validator (projects may keep their own config there),
+except these, which the skills read (the validator checks `sync_ignore`):
+
+| Key | Type | Meaning |
+|---|---|---|
+| `last_synced` | commit | Written by `purpose-sync`: changes up to this commit have been synced. |
+| `sync_ignore` | list of directories ending in `/` | Noise directories (generated data, drafts) that sync never looks at, relative to the repo root. Default `[data/, drafts/]`; `[]` turns it off. Do not list a directory a node realizes. |
 
 ## Node fields
 

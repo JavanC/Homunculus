@@ -77,6 +77,19 @@ root:
   assert.match(errs, /reviewed\[2\]: unknown field "why"/);
 });
 
+test('sync_ignore: a list of directories ending in /; anything else is an error', () => {
+  const { validate } = require(V);
+  const base = 'version: "3.0"\nroot:\n  purpose: Root.\n';
+  assert.deepStrictEqual(validate(parseYaml(base + 'sync_ignore:\n  - data/\n  - out/logs/\n')).errors, []);
+  assert.deepStrictEqual(validate(parseYaml(base + 'sync_ignore: []\n')).errors, []);
+  assert.match(validate(parseYaml(base + 'sync_ignore: data/\n')).errors.join('\n'), /sync_ignore must be a list/);
+  assert.match(validate(parseYaml(base + 'sync_ignore:\n')).errors.join('\n'), /sync_ignore must be a list/);
+  const errs = validate(parseYaml(base + 'sync_ignore:\n  - data\n  - /abs/\n  - ../up/\n')).errors.join('\n');
+  assert.match(errs, /sync_ignore\[0\]: "data" must be a directory ending in \//);
+  assert.match(errs, /sync_ignore\[1\]: "\/abs\/" must be relative to the repo root/);
+  assert.match(errs, /sync_ignore\[2\]: "\.\.\/up\/" must be relative to the repo root/);
+});
+
 test('parser: a comma inside a quoted flow-sequence item does not split it', () => {
   assert.deepStrictEqual(parseYaml('a: ["x.js (gate, per account)", y.js]\n'), { a: ['x.js (gate, per account)', 'y.js'] });
 });

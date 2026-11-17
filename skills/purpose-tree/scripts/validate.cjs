@@ -275,6 +275,17 @@ function validate(doc) {
     }
   }
 
+  if ('sync_ignore' in doc) {
+    const si = doc.sync_ignore;
+    if (!Array.isArray(si)) errors.push('sync_ignore must be a list of directories (e.g. [data/, drafts/]; [] for none)');
+    else si.forEach((d, j) => {
+      const at = `sync_ignore[${j}]`;
+      if (typeof d !== 'string' || !d) errors.push(`${at}: must be a directory path`);
+      else if (d.startsWith('/') || d.startsWith('~') || d.split('/').includes('..')) errors.push(`${at}: "${d}" must be relative to the repo root`);
+      else if (!d.endsWith('/')) errors.push(`${at}: "${d}" must be a directory ending in /`);
+    });
+  }
+
   checkNode(doc.root, 'root', true);
   return { errors, warnings };
 }

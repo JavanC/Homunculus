@@ -109,9 +109,9 @@ root:
 test('untracked directory is one entry, not every file in it', () => {
   const r = repo();
   r.write('purpose-tree.yaml', TREE); r.sh('add', '.'); r.sh('commit', '-qm', 'init');
-  for (let i = 0; i < 20; i++) r.write(`data/run-${i}.json`, '{}');
+  for (let i = 0; i < 20; i++) r.write(`runs/run-${i}.json`, '{}');
   const { out } = r.run();
-  assert.deepStrictEqual(out.changes.map((c) => c.path), ['data/']);
+  assert.deepStrictEqual(out.changes.map((c) => c.path), ['runs/']);
 });
 
 test('empty untracked directories are ignored', () => {
@@ -231,4 +231,115 @@ test('coarse: an exact match or a rename is not marked', () => {
   const out = r.run().out;
   assert.ok(out.changes.length >= 2);
   assert.ok(out.changes.every((c) => c.match === undefined), JSON.stringify(out.changes));
+});
+
+// ── Lag, noise directories, and the session view (over the limit) ──────────
+
+function runWith(dir, args) {
+  try { return { code: 0, out: JSON.parse(execFileSync('node', [SCRIPT, ...args], { cwd: dir, stdio: 'pipe' }).toString()) }; }
+  catch (e) { return { code: e.status, err: String(e.stderr) }; }
+}
+
+test('noise: data/ and drafts/ are left out by default and counted as ignored', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', '1');
+  r.write('data/old.json', '1'); r.write('drafts/a.md', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.write('data/old.json', '2'); r.write('drafts/a.md', '2'); r.write('drafts/b.md', 'new');
+  r.write('scripts/brief.js', '2');
+  const { out } = r.run();
+  assert.deepStrictEqual(out.changes.map((c) => c.path), ['scripts/brief.js']);
+  assert.deepStrictEqual(out.unmatched, []);
+  assert.ok(!out.touched_any.some((c) => /^(data|drafts)\//.test(c.path)));
+  assert.strictEqual(out.ignored, 3);
+  assert.deepStrictEqual(out.sync_ignore, ['data/', 'drafts/']);
+});
+
+test('noise: sync_ignore in the tree replaces the defaults', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE + 'sync_ignore:\n  - build/\n');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.write('build/out.js', 'x'); r.write('data/run.json', '{}');
+  const { out } = r.run();
+  assert.deepStrictEqual(out.changes.map((c) => c.path), ['data/']);
+  assert.strictEqual(out.ignored, 1);
+  assert.deepStrictEqual(out.sync_ignore, ['build/']);
+});
+
+test('lag counts only changed files that reach a node, not every change', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.write('scripts/brief.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  for (let i = 0; i < 60; i++) r.write(`notes/n-${i}.md`, 'x');      // unmatched
+  for (let i = 0; i < 60; i++) r.write(`data/d-${i}.json`, 'x');     // noise
+  r.write('scripts/brief.js', '2'); r.write('app/reader/a.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'lots');
+  const { out } = r.run();
+  assert.strictEqual(out.lag, 2);
+  assert.strictEqual(out.lag_limit, 50);
+  assert.strictEqual(out.over_limit, false);
+});
+
+test('lag over the limit: 51 files under a realized directory', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  for (let i = 0; i < 51; i++) r.write(`app/reader/p-${i}.js`, 'x');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'reader');
+  const { out } = r.run();
+  assert.strictEqual(out.lag, 51);
+  assert.strictEqual(out.over_limit, true);
+});
+
+test('session view: only this session\'s unmatched files, plus moves and deletes of realized paths', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE);
+  r.write('scripts/brief.js', 'same content here\n'.repeat(5)); r.write('app/reader/old.js', 'gone soon');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  // Earlier sessions: a backlog of unmatched work, a move and a delete of realized paths.
+  r.write('tools/old-backlog.js', 'x'); r.write('tools/untouched.js', 'x');
+  r.sh('mv', 'scripts/brief.js', 'scripts/morning.js');
+  r.sh('rm', '-q', 'app/reader/old.js');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'earlier');
+  const sessionBase = r.sh('rev-parse', 'HEAD');
+  // This session: one committed unmatched file, one uncommitted, one untracked, one noise.
+  r.write('tools/export.js', 'x'); r.sh('add', '.'); r.sh('commit', '-qm', 'session');
+  r.write('tools/old-backlog.js', 'edited');
+  r.write('tools/new.js', 'x');
+  r.write('data/run.json', '{}');
+  const { code, out } = runWith(r.dir, ['--session-base', sessionBase]);
+  assert.strictEqual(code, 0);
+  assert.strictEqual(out.session_base, sessionBase);
+  assert.ok(out.unmatched.includes('tools/untouched.js'));      // still in the range...
+  assert.deepStrictEqual(out.session_unmatched, ['tools/export.js', 'tools/new.js', 'tools/old-backlog.js']);
+  const moved = Object.fromEntries(out.moved_or_deleted.map((c) => [c.path, c]));
+  assert.strictEqual(moved['scripts/morning.js'].status, 'R');
+  assert.deepStrictEqual(moved['scripts/morning.js'].nodes, ['brief']);
+  assert.strictEqual(moved['app/reader/old.js'].status, 'D');
+  assert.strictEqual(out.moved_or_deleted.length, 2);
+});
+
+test('moved_or_deleted: a file deleted inside a realized directory that still exists is left out', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE);
+  r.write('app/reader/keep.js', '1'); r.write('app/reader/gone.js', '1'); r.write('scripts/brief.js', '1');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.sh('rm', '-q', 'app/reader/gone.js', 'scripts/brief.js'); r.sh('commit', '-qm', 'del');
+  const { out } = r.run();
+  assert.deepStrictEqual(out.moved_or_deleted.map((c) => c.path), ['scripts/brief.js']);
+});
+
+test('session view: without --session-base it is the uncommitted work only', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.write('tools/committed.js', 'x'); r.sh('add', '.'); r.sh('commit', '-qm', 'c');
+  r.write('tools/new.js', 'x');
+  const { out } = r.run();
+  assert.strictEqual(out.session_base, out.head);
+  assert.deepStrictEqual(out.session_unmatched, ['tools/new.js']);
+});
+
+test('session view: an unknown --session-base is a setup problem (exit 3)', () => {
+  const r = repo();
+  r.write('purpose-tree.yaml', TREE); r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  assert.strictEqual(runWith(r.dir, ['--session-base', 'nope']).code, 3);
 });

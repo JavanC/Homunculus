@@ -33,7 +33,7 @@ Homunculus is now a set of three agent skills. The npm CLI described further dow
 | Skill | What it does | When it runs |
 |---|---|---|
 | `purpose-tree` | The method: a tree of purposes (why each part exists), each realized by implementations (what does it now). Includes a validator. | Read by the other two |
-| `purpose-sync` | At the end of a session, proposes `realized_by` updates for the code that changed, and flags changes that serve no purpose. When there is no proposal, gap or review item it asks nothing and prints only a one-line summary. | Session end, or "sync the purpose tree" |
+| `purpose-sync` | At the end of a session, proposes `realized_by` updates for the code that changed, and flags changes that serve no purpose. When there is no proposal, gap or review item it asks nothing and prints only a one-line summary. An agent with nobody to ask hands the items to its lead instead. | Session end, or "sync the purpose tree" |
 | `purpose-review` | Builds a first tree for a project that has none, or reviews the whole tree: gaps, missing paths, stale nodes, failing health checks, better ways to realize a purpose, and purposes that should split, merge or grow children. A review is one list, top down, at most 10 items. | Only when you ask ("review the purpose tree") |
 
 Purposes, at any level, change only when you confirm them; the AI proposes implementations. Answers to review suggestions are kept under each node's `reviewed`, so the same suggestion is not asked again.
@@ -197,6 +197,11 @@ The evolution engine then:
 ---
 
 ## What's New
+
+### skills-2026-11-17
+
+- **purpose-sync** — how far behind the tree is now counts changed files that reach a node's `realized_by`, leaving out noise directories (`data/`, `drafts/`, or the tree's own `sync_ignore:` list); when it is more than 50 behind, sync still proposes, but only for this session's unmatched files plus moves and deletions of realized paths, and no longer offers to reset the baseline (that happens only when you ask); a dispatched agent that cannot ask anyone prints a pending block (`purpose-sync: pending …`) for its lead to ask you, and the answers are applied later
+- **purpose-tree** — new top-level `sync_ignore:` key, checked by the validator
 
 ### skills-2026-10-30
 

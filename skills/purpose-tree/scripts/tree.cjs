@@ -146,4 +146,14 @@ function featureAreas(dir, files, { minFiles = 3 } = {}) {
   return [...counts].filter(([, n]) => n >= minFiles).map(([entry, n]) => ({ entry, files: n }));
 }
 
-module.exports = { TREE_FILES, findTree, collectNodes, nodeHistory, pathTokens, resolve, matchKind, mentions, featureAreas };
+// Noise directories that sync never looks at (generated data, drafts). A tree's top-level
+// sync_ignore: list replaces these defaults; sync_ignore: [] turns them off.
+const DEFAULT_SYNC_IGNORE = ['data/', 'drafts/'];
+function syncIgnore(doc) {
+  const v = doc && doc.sync_ignore;
+  return Array.isArray(v) ? v.filter((d) => typeof d === 'string' && d.endsWith('/')) : DEFAULT_SYNC_IGNORE;
+}
+// A repo-relative path (an untracked directory ends in /) inside one of the ignored dirs.
+const isIgnored = (file, dirs) => dirs.some((d) => file.startsWith(d));
+
+module.exports = { TREE_FILES, findTree, collectNodes, nodeHistory, pathTokens, resolve, matchKind, mentions, featureAreas, DEFAULT_SYNC_IGNORE, syncIgnore, isIgnored };

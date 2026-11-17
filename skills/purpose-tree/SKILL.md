@@ -60,6 +60,8 @@ root:
 - Every sub-purpose needs a unique `id` so it can be referenced.
 - All items in `realized_by` are needed together (AND). Alternatives (OR) are not modeled yet.
 - If a sub-purpose is later replaced by a single tool, swap the object for a string.
+- Top-level `sync_ignore:` lists noise directories (default `data/`, `drafts/`) that
+  sync skips; see the schema.
 - **Legacy trees:** a `goals:` map (key = id, value = node) is read as sub-purposes
   appended to `realized_by`. Do not convert unless asked.
 

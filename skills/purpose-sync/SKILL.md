@@ -14,24 +14,36 @@ explicitly accepts a session-end review item (step 2b); never edit one on your o
 1. **Collect changes.** Run:
 
    ```bash
-   node <this-skill>/scripts/changes.cjs
+   node <this-skill>/scripts/changes.cjs [--session-base <commit>]
    ```
+
+   `--session-base` is the commit `HEAD` was at when this session started (for a branch made
+   for this task: `git merge-base HEAD <main branch>`). Without it, "this session" means the
+   uncommitted and untracked files only.
 
    It prints JSON: the tree file, the base commit (the tree's `last_synced`, or the last
    commit that touched the tree), every changed path since then (committed and not), and
    for each path the node ids whose `realized_by` mentions it. `touched_any` lists every
    path changed by any commit in the range (plus uncommitted ones), with its nodes; a path
-   changed and then reverted still appears there. Exit 2 = no tree here: stop silently.
+   changed and then reverted still appears there. Paths under the tree's `sync_ignore`
+   directories (default `data/`, `drafts/`) are left out everywhere; `ignored` counts them.
+   Exit 2 = no tree here: stop silently.
    Exit 4 = the tree exists but does not parse: print exactly
    `purpose-sync: skipped reason=unparseable file=<tree>` as your last line, change
    nothing, and let the session end continue (`purpose-review` can rebuild the tree).
-   Exit 3 = setup problem (skill missing, not a git repo): report it in one line and stop.
+   Exit 3 = setup problem (skill missing, not a git repo, unknown `--session-base`): report
+   it in one line and stop.
 
-   **Too many changes?** If there are more than 50 `changes` (whatever `base_source` is),
-   the range is too old to sync item by item. Do not propose anything. Ask one question:
-   "Set the sync baseline to HEAD? (purposes stay as they are; run a tree review to catch
-   up)". Only on yes, do step 5. On no or no answer, write nothing. Print the summary with
-   `proposed=0`.
+   **Far behind?** `lag` is the number of changed files that reach a node's `realized_by`
+   (noise directories excluded). When `over_limit` is true (`lag` > `lag_limit`, 50), the
+   range is too old to sync item by item, so narrow it; still propose:
+   - only `session_unmatched` (this session's files that match no node), and
+   - `moved_or_deleted` (renames and deletions, anywhere in the range, that leave a
+     `realized_by` entry pointing at nothing).
+
+   Say in one line that the tree is `<lag>` files behind and a tree review
+   (`purpose-review`) catches it up. Do not move `last_synced` in this mode (step 5). Reset
+   the baseline only when the human explicitly asks for it.
 
 2. **Decide proposals.** Work from that JSON, not from memory of the session. Use the
    conversation only to understand *why* something changed.
@@ -75,10 +87,35 @@ explicitly accepts a session-end review item (step 2b); never edit one on your o
 
    Do not ask follow-up questions. Anything left unanswered counts as rejected.
 
+   **Nobody to ask?** If no human can answer in this session (you were dispatched by
+   another agent, your instructions say to report to a lead or not to ask, or the run is
+   non-interactive), do not ask and do not write the tree. Record the items as pending:
+
+   ```bash
+   echo '{"items":[{"kind":"proposal","text":"offline_reading: add \"app/cache/\""},
+                   {"kind":"gap","text":"scripts/export.js serves no purpose — which purpose is it for?"}]}' \
+     | node <this-skill>/scripts/pending.cjs
+   ```
+
+   `kind` is `proposal`, `gap` or `review`; `text` is the line you would have shown. It
+   prints a `purpose-sync-pending` block and, as its last line,
+   `purpose-sync: pending proposed=<N> gaps=<N> reviews=<N>`. Put the whole output, block
+   included, in your report to whoever dispatched you, and end there: skip steps 5 and 6.
+   The lead asks the human (several projects' blocks can go in one batch) and passes the
+   answers back to a session in this repo, which does step 5 with them.
+
 5. **Apply.** Edit only the accepted `realized_by` entries. Set the top-level
    `last_synced:` to the current `HEAD` commit when at least one item was shown (answered
-   or not, so the same items are not raised again), or when the human said yes to the
-   baseline question. Otherwise do not write the file. Then validate:
+   or not, so the same items are not raised again), or when the human asked to reset the
+   baseline. Otherwise do not write the file. When `over_limit` was true, do not move
+   `last_synced` unless the human asked for a reset: the backlog stays visible.
+
+   **Answers to a pending block** (from a lead): check that `repo:` and `tree:` name this
+   project and tree. Apply the accepted items; an item whose path no longer exists or whose
+   node is gone counts as rejected. Set `last_synced` to the block's `last_synced_on_apply`
+   commit (not the current `HEAD`: later commits were not shown to the human); `keep` means
+   leave it, and so does a `last_synced` already at or past that commit (never move it back). Then validate as below and print the summary line of step 6, counting the
+   block's items.
 
    ```bash
    node <purpose-tree-skill>/scripts/validate.cjs
@@ -92,7 +129,8 @@ explicitly accepts a session-end review item (step 2b); never edit one on your o
    purpose-sync: proposed=<N> accepted=<N> rejected=<N> gaps=<N> reviews=<N>
    ```
 
-   `reviews` counts the review items raised in step 2b.
+   `reviews` counts the review items raised in step 2b. A pending run prints the pending
+   line instead (step 4); applying its answers later prints this line.
 
    This skill stores nothing else. A host that wants to learn from these numbers reads
    this line.
