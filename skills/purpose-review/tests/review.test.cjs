@@ -31,7 +31,7 @@ root:
         - scripts/gone.js
       health_check:
         command: "exit 1"
-        expected: exit 0
+        fails_when: HEALTH_EMPTY=1
     - id: empty_one
       purpose: Has nothing yet.
       status: planned
@@ -275,4 +275,254 @@ test('review fixes: bad reviewed entries and duplicate ids do not crash; @@ file
   const out = r.run();
   assert.ok(out.problems.length > 0);
   assert.ok(out.commits_by_node.brief.count >= 1);
+});
+
+// ── confirmed, changes_since_synced, --record, pending ───────────────────
+
+const CTREE = `# project tree
+version: "3.0"
+root:
+  purpose: Root.
+  confirmed:
+    by: Javan
+    on: 2026-11-19
+  realized_by:
+    - id: brief
+      purpose: Know what matters each morning.
+      realized_by:
+        - scripts/brief.js
+    - id: export
+      purpose: Data can leave the system.
+      confirmed:
+        by: Javan
+        on: 2026-11-19
+      realized_by:
+        - scripts/export.js
+`;
+
+function crepo(tree = CTREE) {
+  const r = repo();
+  r.write('scripts/brief.js', '1'); r.write('scripts/export.js', '1'); r.write('purpose-tree.yaml', tree);
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  r.raw = (...args) => {
+    try { return { code: 0, out: execFileSync('node', [SCRIPT, ...args], { cwd: r.dir, stdio: 'pipe' }).toString() }; }
+    catch (e) { return { code: e.status, out: String(e.stdout), err: String(e.stderr) }; }
+  };
+  return r;
+}
+
+test('unconfirmed nodes are the first health fact, shallowest first; confirming one removes it', () => {
+  const r = crepo();
+  const out = r.run();
+  assert.deepStrictEqual(Object.keys(out).slice(0, 3), ['mode', 'tree', 'unconfirmed']);
+  assert.deepStrictEqual(out.unconfirmed, [{ id: 'brief', depth: 1, purpose: 'Know what matters each morning.' }]);
+  r.write('purpose-tree.yaml', CTREE.replace('      confirmed:\n        by: Javan\n        on: 2026-11-19\n', ''));
+  const out2 = r.run();
+  assert.deepStrictEqual(out2.unconfirmed.map((u) => u.id), ['brief', 'export']);
+  assert.ok(out2.warnings.some((w) => /export: draft \(no confirmed\)/.test(w)));
+});
+
+test('a fully confirmed tree reports an empty unconfirmed list', () => {
+  const r = crepo(CTREE.replace('    - id: brief\n      purpose: Know what matters each morning.\n', '    - id: brief\n      purpose: Know what matters each morning.\n      confirmed:\n        by: J\n        on: 2026-11-19\n'));
+  assert.deepStrictEqual(r.run().unconfirmed, []);
+});
+
+test('changes_since_synced: the diff since last_synced, noise directories left out', () => {
+  const r = crepo(CTREE.replace('version: "3.0"\n', `version: "3.0"\nlast_synced: PLACEHOLDER\n`).replace('PLACEHOLDER', 'x'));
+  const base = r.sh('rev-parse', 'HEAD');
+  r.write('purpose-tree.yaml', fs.readFileSync(path.join(r.dir, 'purpose-tree.yaml'), 'utf8').replace('last_synced: x', `last_synced: ${base}`));
+  r.write('scripts/brief.js', '2'); r.write('scripts/new.js', '1'); r.write('data/out.json', '{}');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'more');
+  const c = r.run().changes_since_synced;
+  assert.strictEqual(c.base, base);
+  assert.strictEqual(c.base_source, 'last_synced');
+  assert.deepStrictEqual(c.changes.map((x) => [x.path, x.nodes]).sort(), [['scripts/brief.js', ['brief']], ['scripts/new.js', []]]);
+  assert.strictEqual(c.lag, 1);
+  assert.deepStrictEqual(c.unmatched, ['scripts/new.js']);
+});
+
+const answersFile = (r, body) => { const f = path.join(r.dir, 'answers.json'); fs.writeFileSync(f, JSON.stringify(body)); return f; };
+
+test('--record writes reviewed entries; the next review lists them and the tree stays valid', () => {
+  const r = crepo();
+  const f = answersFile(r, { on: '2026-11-20', answers: [
+    { node: 'brief', kind: 'split', said: 'split brief into daily vs weekly', answer: 'declined', evidence: 'scripts/' },
+    { node: 'export', kind: 'stale', said: 'purpose still true', answer: 'kept' },
+  ] });
+  const res = r.raw('--record', f);
+  assert.strictEqual(res.code, 0, res.err);
+  assert.deepStrictEqual(JSON.parse(res.out), { recorded: 2, confirmed: 0, tree: 'purpose-tree.yaml' });
+  const text = fs.readFileSync(path.join(r.dir, 'purpose-tree.yaml'), 'utf8');
+  assert.match(text, /^# project tree\n/);
+  const next = r.run();
+  assert.deepStrictEqual(next.problems, []);
+  assert.strictEqual(next.reviewed.brief[0].kind, 'split');
+  assert.strictEqual(next.reviewed.brief[0].answer, 'declined');
+  assert.strictEqual(next.reviewed.brief[0].on, '2026-11-20');
+  assert.strictEqual(next.reviewed.brief[0].evidence, 'scripts/');
+  assert.strictEqual(next.reviewed.export[0].answer, 'kept');
+});
+
+test('--record: the same suggestion answered again updates its entry, other entries stay', () => {
+  const r = crepo();
+  const a = (said, answer, on) => answersFile(r, { on, answers: [{ node: 'brief', kind: 'split', said, answer }] });
+  r.raw('--record', a('split it', 'declined', '2026-11-01'));
+  r.raw('--record', a('merge it', 'declined', '2026-11-02'));
+  r.raw('--record', a('split it', 'accepted', '2026-11-20'));
+  const reviewed = r.run().reviewed.brief;
+  assert.deepStrictEqual(reviewed.map((x) => [x.said, x.answer, x.on]), [['split it', 'accepted', '2026-11-20'], ['merge it', 'declined', '2026-11-02']]);
+});
+
+test('--record can also confirm nodes when the human said so', () => {
+  const r = crepo();
+  const res = r.raw('--record', answersFile(r, { on: '2026-11-20', answers: [], confirm: [{ node: 'brief', by: 'Javan' }] }));
+  assert.strictEqual(res.code, 0, res.err);
+  assert.strictEqual(JSON.parse(res.out).confirmed, 1);
+  assert.deepStrictEqual(r.run().unconfirmed, []);
+});
+
+test('--record: an unknown node or a bad answer exits 1 and leaves the tree untouched', () => {
+  const r = crepo();
+  const before = fs.readFileSync(path.join(r.dir, 'purpose-tree.yaml'), 'utf8');
+  const ghost = r.raw('--record', answersFile(r, { answers: [{ node: 'ghost', kind: 'split', said: 'x', answer: 'declined' }] }));
+  assert.strictEqual(ghost.code, 1);
+  assert.match(ghost.err, /ghost/);
+  const bad = r.raw('--record', answersFile(r, { answers: [{ node: 'brief', kind: 'split', said: 'x', answer: 'maybe' }] }));
+  assert.strictEqual(bad.code, 1);
+  assert.strictEqual(fs.readFileSync(path.join(r.dir, 'purpose-tree.yaml'), 'utf8'), before);
+});
+
+test('pending: items in purpose-tree.pending.yaml are listed in the review output', () => {
+  const r = crepo();
+  assert.strictEqual(r.run().pending, null);
+  r.write('purpose-tree.pending.yaml', 'version: 1\nrepo: "x"\ntree: "purpose-tree.yaml"\nhead: "abc"\nitems:\n  - n: 1\n    source: sync\n    kind: proposal\n    text: "brief: add \\"scripts/x.js\\""\n');
+  const p = r.run().pending;
+  assert.strictEqual(p.file, 'purpose-tree.pending.yaml');
+  assert.strictEqual(p.items[0].text, 'brief: add "scripts/x.js"');
+});
+
+// --- negative control: a health_check must be able to fail ---
+const hcTree = (hc) => `version: "3.0"
+root:
+  purpose: Root.
+  realized_by:
+    - id: logs
+      purpose: The log keeps growing.
+      realized_by:
+        - scripts/a.js
+      health_check:
+${hc}
+`;
+const hcRepo = (hc) => {
+  const r = repo();
+  r.write('purpose-tree.yaml', hcTree(hc)); r.write('scripts/a.js', '1'); r.write('data/log.jsonl', '{}\n');
+  r.sh('add', '.'); r.sh('commit', '-qm', 'init');
+  return r;
+};
+const status = (hc) => hcRepo(hc).run('--run-checks').health_checks[0];
+
+for (const cmd of ['test -f data/log.jsonl && true', 'cat data/log.jsonl > /dev/null', 'true', 'grep -c . data/log.jsonl || true']) {
+  test(`bypass is a false green: ${cmd}`, () => {
+    const c = status(`        command: "${cmd}"\n        fails_when: ": > data/log.jsonl"`);
+    assert.strictEqual(c.status, 'false_green');
+  });
+}
+
+test('a check that really needs entries survives the same negative control', () => {
+  const c = status('        command: "test -s data/log.jsonl"\n        fails_when: ": > data/log.jsonl"');
+  assert.strictEqual(c.status, 'ok');
+});
+
+test('positive control: test -f with a real fails_when passes', () => {
+  const c = status('        command: "test -f data/log.jsonl"\n        fails_when: "rm -f data/log.jsonl"');
+  assert.strictEqual(c.status, 'ok');
+  assert.strictEqual(c.exit, 0);
+  assert.notStrictEqual(c.negative_exit, 0);
+});
+
+test('fails_when negative run happens in a copy: real data survives', () => {
+  const r = hcRepo('        command: "test -f data/log.jsonl"\n        fails_when: "rm -f data/log.jsonl"');
+  r.run('--run-checks');
+  assert.ok(fs.existsSync(path.join(r.dir, 'data/log.jsonl')));
+});
+
+test('fails_when as env assignment is passed to the check', () => {
+  const ok = status('        command: "test -z \\"$HEALTH_EMPTY\\""\n        fails_when: HEALTH_EMPTY=1');
+  assert.strictEqual(ok.status, 'ok');
+  const bad = status('        command: "true"\n        fails_when: HEALTH_EMPTY=1');
+  assert.strictEqual(bad.status, 'false_green');
+});
+
+test('no fails_when = no check, not run, not green', () => {
+  const c = status('        command: "true"');
+  assert.strictEqual(c.status, 'no_check');
+  assert.strictEqual(c.exit, undefined);
+});
+
+test('a failing check is reported failing without a negative run', () => {
+  const c = status('        command: "exit 1"\n        fails_when: HEALTH_EMPTY=1');
+  assert.strictEqual(c.status, 'failing');
+});
+
+test('manual check: fresh vs overdue by last_run', () => {
+  const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const fresh = status(`        kind: manual\n        owner: javan\n        last_run: ${day(3)}`);
+  assert.strictEqual(fresh.status, 'manual_ok');
+  assert.strictEqual(fresh.owner, 'javan');
+  const old = status(`        kind: manual\n        owner: javan\n        last_run: ${day(90)}`);
+  assert.strictEqual(old.status, 'manual_overdue');
+  const every = status(`        kind: manual\n        owner: javan\n        every_days: 2\n        last_run: ${day(3)}`);
+  assert.strictEqual(every.status, 'manual_overdue');
+});
+
+// --- review round 1 ---
+test('F1: negative run never truncates data reached through a symlink', () => {
+  const r = hcRepo('        command: "test -s data/latest.jsonl"\n        fails_when: ": > data/latest.jsonl"');
+  fs.symlinkSync('log.jsonl', path.join(r.dir, 'data/latest.jsonl'));
+  r.sh('add', '.'); r.sh('commit', '-qm', 'link');
+  const c = r.run('--run-checks').health_checks[0];
+  assert.strictEqual(fs.statSync(path.join(r.dir, 'data/log.jsonl')).size, 3);
+  assert.strictEqual(c.status, 'negative_error');
+});
+
+test('F3: a check that fails in the copy for unrelated reasons is not "ok"', () => {
+  const c = status('        command: "git log -1 | grep -q ."\n        fails_when: "true"');
+  assert.strictEqual(c.status, 'negative_error');
+});
+
+test('F4: a FIFO in the project does not crash review', () => {
+  const r = hcRepo('        command: "test -s data/log.jsonl"\n        fails_when: ": > data/log.jsonl"');
+  execFileSync('mkfifo', [path.join(r.dir, 'data/pipe')]);
+  const c = r.run('--run-checks').health_checks[0];
+  assert.strictEqual(c.status, 'ok');
+});
+
+test('F6: non-string fails_when is no check', () => {
+  assert.strictEqual(status('        command: "true"\n        fails_when: true').status, 'no_check');
+});
+
+test('F7: env form is linear-time and a quoted value is not mistaken for a command', () => {
+  const t = Date.now();
+  const c = status('        command: "true"\n        fails_when: "' + 'A= '.repeat(30) + 'x"');
+  assert.ok(Date.now() - t < 5000);
+  assert.notStrictEqual(c.status, 'ok');
+});
+
+test('F8: a future last_run is not fresh', () => {
+  const f = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  assert.strictEqual(status(`        kind: manual\n        owner: j\n        last_run: ${f}`).status, 'manual_overdue');
+});
+
+test('acceptance 4: continuity over target fails the check, within target passes', () => {
+  const mk = (days) => {
+    const r = repo();
+    r.write('purpose-tree.yaml', hcTree('        command: "node scripts/c.js"\n        fails_when: \'echo {"days":5} > data/continuity.json\''));
+    r.write('scripts/a.js', '1');
+    r.write('scripts/c.js', "const d=JSON.parse(require('fs').readFileSync('data/continuity.json','utf8')).days;process.exit(d<=2?0:1)");
+    r.write('data/continuity.json', JSON.stringify({ days }));
+    r.sh('add', '.'); r.sh('commit', '-qm', 'i');
+    return r.run('--run-checks').health_checks[0];
+  };
+  assert.strictEqual(mk(5).status, 'failing');
+  assert.strictEqual(mk(1).status, 'ok');
 });

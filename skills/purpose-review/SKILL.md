@@ -16,14 +16,14 @@ cannot see.
 node <this-skill>/scripts/review.cjs --run-checks
 ```
 
-`--run-checks` runs each node's `health_check` command (30 s limit each). These are the
+`--run-checks` runs each node's `health_check` command (30 s limit each), then runs it again with its `fails_when` applied (a negative control: the second run must fail). These are the
 project's own commands; if any looks destructive, run without the flag and ask first.
 The output's `mode` decides the next step.
 
 ## Bootstrap (`mode: bootstrap` — no tree yet)
 
 The AI may **draft** the root and first layer, labeled by source. The human confirms
-every line. Do not open with "Why does this project exist?" when the repo has material
+every line; until then a node is a draft (no `confirmed`). Do not open with "Why does this project exist?" when the repo has material
 to draft from.
 
 1. **Read first.** Read every file in `intent_docs` (README, CLAUDE.md/AGENTS.md, product
@@ -50,9 +50,24 @@ to draft from.
    "Accept all? (or e.g. 'reject 2', '3: reword to …')". Unanswered items count as rejected.
    A rejected or unanswered root means no tree yet: ask for the root in one sentence.
 6. Write `purpose-tree.yaml` from the [template](../purpose-tree/templates/purpose-tree.yaml)
-   with the accepted nodes, set `last_synced:` to the current `HEAD`, and validate.
+   with the accepted nodes, set `last_synced:` to the current `HEAD`, and validate. Give each
+   accepted node `confirmed` with `confirm.cjs --by <the human>`; give each drafted line a
+   `source:` list instead of a comment.
    Do not draft deeper levels now; a later full review grows them (purpose-structure pass).
    `purpose-sync` never adds purposes.
+
+**Nobody to ask?** If no human can answer in this session (you were dispatched by another
+agent, or the run is non-interactive), still write the tree: the drafted root and first
+layer as drafts, with `source:` and no `confirmed`. Put the numbered questions and gap lines
+of step 5 in the pending file instead of asking:
+
+```bash
+echo '{"items":[{"kind":"question","text":"Is the root: \"...\"?"}, {"kind":"draft","node":"sync","text":"..."}]}' \
+  | node <purpose-tree-skill>/scripts/pending.cjs --source bootstrap
+```
+
+Commit both files and report. A later session with a human asks the questions from the file,
+confirms the nodes they accept, and clears the file.
 
 **Empty or near-empty repo** (no intent docs and almost no inventory): there is nothing to
 draft from. Ask exactly one question — "Why does this project exist? (one sentence)" —
@@ -72,6 +87,9 @@ Turn the facts into items. Skip anything with nothing to say.
 
 | Fact | Item |
 |---|---|
+| `unconfirmed` (always first) | Nodes no human has confirmed, shallowest first. One item: list them and ask which to confirm; an answer "confirm" is recorded with `--record` (`confirm`). Shown every run, so drafts do not sit quietly. |
+| `pending` | Items an earlier run left in `purpose-tree.pending.yaml`: show their `text` as asked, with the other items, then clear the file once answered. |
+| `changes_since_synced` | The diff since `last_synced` (noise left out: sync_ignore, lockfiles, tests, docs). Use it as evidence: `unmatched` paths and `moved_or_deleted` become gap and `realized_by` items. `over_limit` means the tree is far behind: say so. `null` when purpose-sync is not installed. |
 | `problems` | Fix proposal for each validation error. |
 | `missing_paths` | The implementation is gone: update `realized_by`, or flag the node as a gap. |
 | `nodes_without_implementation` | Gap: build something, mark it `planned` with a `paused_reason`, or delete the purpose. |
@@ -79,8 +97,12 @@ Turn the facts into items. Skip anything with nothing to say.
 | `unowned` | Gap: which purpose does this serve? If none, should it exist? An entry with `noted_by` is already named in those nodes' `status_note` or `paused_reason`: read the note first. If it records a decision, raise nothing; raise it only if the note is out of date or the decision was never carried out. |
 | `stale` (paused/planned) | Resume, keep with an updated reason, or delete. Skip it if `reviewed` has a `stale` entry without `reask`. |
 | `stale` (active) | Is this purpose still true? Skip it if `reviewed` has a `stale` entry without `reask`. |
-| `health_checks` with non-zero `exit` | The purpose is not being met, or the check is wrong. Say which you think. |
-| `health_checks` that pass | Would it fail if its data were empty? If not, it is a false green: propose a stronger check. |
+| `health_checks` with `status: failing` | The purpose is not being met, or the check is wrong. Say which you think. |
+| `status: false_green` | The check exits 0 even with its `fails_when` applied. It judges nothing: propose a check that would fail, or a better `fails_when`. |
+| `status: no_check` | The node claims a `health_check` without `fails_when`. It counts as no check: propose a `fails_when`, `kind: manual`, or move it to `tests`. |
+| `status: negative_error` | The `fails_when` itself failed or timed out. Fix it. |
+| `status: manual_overdue` | A manual check is older than its `every_days`. Ask the `owner` to run it and update `last_run`. |
+| `status: ok` / `manual_ok` | Nothing to raise. |
 
 These are **health facts**. They are shown every run until fixed or the node is `paused`;
 `reviewed` never hides them, and a check that keeps failing is not new evidence for a
@@ -123,7 +145,7 @@ sends nothing else. Patterns miss some secrets, so say so when you use it.
 `session_signals.supported: false` means it could not read them — say that, never "no
 repeats".
 
-**Before listing a suggestion, check `reviewed`** (that node's answered suggestions):
+**Before listing a suggestion, check `reviewed`** (what `--record` wrote) (that node's answered suggestions):
 - Same suggestion, same kind, no evidence beyond what the entry cites → do not show it.
 - A different suggestion of the same kind → show it.
 - Unsure → show it, marked "may repeat <on>: <said>". A repeat costs one line; a wrong
@@ -153,21 +175,25 @@ repeats".
 ### Apply
 
 1. Apply only accepted items. Purposes change only with an explicit answer.
-2. **Record every suggestion item you showed** under its node's `reviewed` (block mappings
-   only, never `{...}`):
+2. **Record every suggestion item you showed** with `--record`; do not edit `reviewed` by
+   hand. Write the answers as JSON, then:
 
-   ```yaml
-   reviewed:
-     - kind: better_means
-       said: replace the hourly poll with a webhook
-       answer: declined        # declined (rejected or unanswered) | kept | accepted
-       on: 2026-10-29
-       evidence: scripts/poll.js, 4 fixes in 30 days
+   ```bash
+   node <this-skill>/scripts/review.cjs --record answers.json     # or: --record - < answers.json
    ```
 
-   If an entry for the same suggestion exists, update its `answer` and `on` instead of
-   adding one. Health facts and held items are not recorded, except a `stale` answer:
-   record it as `kind: stale`, so the node is asked again only after the stale threshold.
+   ```json
+   {"on": "2026-10-29",
+    "answers": [{"node": "poller", "kind": "better_means", "said": "replace the hourly poll with a webhook",
+                 "answer": "declined", "evidence": "scripts/poll.js, 4 fixes in 30 days"}],
+    "confirm": [{"node": "sync", "by": "Javan"}]}
+   ```
+
+   `answer` is `declined` (rejected or unanswered), `kept` or `accepted`. An entry for the
+   same `kind` and `said` is updated, not duplicated. `confirm` lists nodes the human said
+   yes to. It writes the tree, checks it stays valid and writes nothing otherwise. Health
+   facts and held items are not recorded, except a `stale` answer: record it as
+   `kind: stale`, so the node is asked again only after the stale threshold.
 3. Validate. Never leave an invalid tree:
 
    ```bash
@@ -179,6 +205,10 @@ repeats".
    ```
    purpose-review: mode=<bootstrap|review> items=<N> accepted=<N> rejected=<N>
    ```
+
+**Nobody to ask?** Do not ask and do not apply. Put each item you would have shown in
+the pending file (`pending.cjs --source review`), commit it, and report. Do not record
+`reviewed` answers for items nobody answered.
 
 ## Rules
 

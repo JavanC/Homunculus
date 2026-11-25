@@ -193,14 +193,23 @@ function parseYaml(text) {
 
 const NODE_KEYS = new Set([
   'id', 'purpose', 'realized_by', 'status', 'status_note', 'paused_reason',
-  'metrics', 'tests', 'health_check', 'agents', 'goals', 'reviewed',
+  'metrics', 'tests', 'health_check', 'agents', 'goals', 'reviewed', 'confirmed', 'source',
 ]);
+// confirmed: {by, on}, a human's sign-off on the node's purpose. Missing = a draft (warning only).
+const CONFIRMED_KEYS = new Set(['by', 'on']);
+// source: where the node's purpose was inferred from. One entry per origin.
+const SOURCE_KINDS = new Set(['doc', 'code', 'commit', 'ticket', 'conversation', 'other']);
+const SOURCE_KEYS = new Set(['kind', 'ref', 'note']);
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const DATE = { test: (s) => DATE_RE.test(s) && new Date(s + 'T00:00:00Z').toISOString().slice(0, 10) === s };
+const text = (x) => (typeof x === 'string' || typeof x === 'number' ? String(x).trim() : '');
 // reviewed: one entry per suggestion item shown about the node, with the human's answer.
 const REVIEWED_KINDS = new Set(['better_means', 'ticket', 'repeated_work', 'grow_children', 'split', 'merge', 'stale']);
 const REVIEWED_ANSWERS = new Set(['declined', 'kept', 'accepted']);
 const REVIEWED_KEYS = new Set(['kind', 'said', 'answer', 'on', 'evidence']);
 const STATUSES = new Set(['active', 'paused', 'planned']);
-// A health_check that is only an existence/count probe passes on empty data.
+// A health_check that is only an existence/count probe passes on empty data. Only a hint:
+// the real test is the fails_when negative control, which `review --run-checks` runs.
 const WEAK_CHECK = /^\s*(test\s+-[efxsd]\s+\S+|\[\s+-[efxsd]\s+\S+\s+\]|ls\b[^|]*\|\s*head\b.*|wc\s+-l\b.*)\s*$/;
 
 function validate(doc) {
@@ -233,10 +242,47 @@ function validate(doc) {
     }
     if (n.health_check !== undefined && n.health_check !== null) {
       const hc = n.health_check;
-      if (typeof hc !== 'object' || !hc.command) errors.push(`${where}: health_check needs a command`);
-      else if (WEAK_CHECK.test(String(hc.command))) {
-        errors.push(`${where}: health_check only probes existence/count and passes on empty data: ${hc.command}`);
+      if (typeof hc !== 'object' || Array.isArray(hc)) errors.push(`${where}: health_check must be a mapping`);
+      else if (hc.kind === 'manual') {
+        if (!text(hc.owner)) errors.push(`${where}: manual health_check needs an owner`);
+        if (hc.last_run === undefined || hc.last_run === null || hc.last_run === '') errors.push(`${where}: manual health_check needs last_run`);
+        else if (!DATE.test(String(hc.last_run))) errors.push(`${where}: manual health_check last_run must be YYYY-MM-DD (got "${hc.last_run}")`);
+        if (hc.every_days !== undefined && !(Number(hc.every_days) > 0)) errors.push(`${where}: manual health_check every_days must be a positive number`);
+      } else if (hc.kind !== undefined && hc.kind !== 'command') {
+        errors.push(`${where}: health_check kind must be command|manual (got "${hc.kind}")`);
+      } else if (!hc.command) errors.push(`${where}: health_check needs a command`);
+      else {
+        if (typeof hc.fails_when !== 'string' || !hc.fails_when.trim()) {
+          warnings.push(`${where}: health_check has no fails_when; it counts as no check until you add a negative control`);
+        }
+        if (WEAK_CHECK.test(String(hc.command))) {
+          warnings.push(`${where}: health_check only probes existence/count and may pass on empty data: ${hc.command}`);
+        }
       }
+    }
+
+    const c = n.confirmed;
+    if (c === undefined || c === null) {
+      warnings.push(`${where}: draft (no confirmed); a human confirms it with {by, on}`);
+    } else if (typeof c !== 'object' || Array.isArray(c)) {
+      errors.push(`${where}: confirmed must be a mapping with by and on`);
+    } else {
+      for (const k of Object.keys(c)) if (!CONFIRMED_KEYS.has(k)) errors.push(`${where}.confirmed: unknown field "${k}"`);
+      if (!text(c.by)) errors.push(`${where}.confirmed: missing by`);
+      if (c.on === undefined || c.on === null || c.on === '') errors.push(`${where}.confirmed: missing on`);
+      else if (!DATE.test(String(c.on))) errors.push(`${where}.confirmed: on must be YYYY-MM-DD (got "${c.on}")`);
+    }
+
+    if (n.source !== undefined && n.source !== null) {
+      if (!Array.isArray(n.source)) errors.push(`${where}: source must be a list of {kind, ref}`);
+      else n.source.forEach((s, j) => {
+        const at = `${where}.source[${j}]`;
+        if (!s || typeof s !== 'object' || Array.isArray(s)) { errors.push(`${at}: must be a mapping`); return; }
+        for (const k of Object.keys(s)) if (!SOURCE_KEYS.has(k)) errors.push(`${at}: unknown field "${k}"`);
+        if (s.kind && !SOURCE_KINDS.has(s.kind)) errors.push(`${at}: unknown kind "${s.kind}" (${[...SOURCE_KINDS].join('|')})`);
+        if (!s.kind) errors.push(`${at}: missing kind`);
+        if (!text(s.ref)) errors.push(`${at}: missing ref`);
+      });
     }
 
     if (n.reviewed !== undefined && n.reviewed !== null) {
@@ -316,4 +362,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { parseYaml, validate };
+module.exports = { parseYaml, validate, REVIEWED_KINDS, REVIEWED_ANSWERS };

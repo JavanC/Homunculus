@@ -1,0 +1,17 @@
+version: "3.0"
+root:
+  purpose: Root.
+  confirmed:
+    by: t
+    on: 2026-11-20
+  realized_by:
+    - id: a
+      purpose: Checked by hand.
+      confirmed:
+        by: t
+        on: 2026-11-20
+      realized_by: [x.js]
+      health_check:
+        kind: manual
+        owner: javan
+        last_run: 2026-11-20

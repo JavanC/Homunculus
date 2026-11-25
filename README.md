@@ -120,7 +120,8 @@ autonomous_action:
       purpose: "Discover better approaches while developer sleeps"
       realized_by: heartbeat/heartbeat.sh        # a shell script
       health_check:
-        command: "test $(find logs/ -mtime -1 | wc -l) -gt 0"
+        command: "find logs/ -type f -mtime -1 | grep -q ."
+        fails_when: "rm -f logs/*"                # negative control: with it, the command must fail
         expected: "nightly agent ran in last 24h"
 
     task_management:
@@ -197,6 +198,14 @@ The evolution engine then:
 ---
 
 ## What's New
+
+### skills-2026-11-25
+
+- **purpose-tree** — `health_check` now needs `fails_when` (a negative control: an env like `HEALTH_EMPTY=1`, or a command that empties the data); without it the check counts as none. A manual check is `{kind: manual, owner, last_run, every_days?}`. The existence-probe blacklist is a warning now. Docs say what goes in `tests` (implementation is correct) and what in `health_check` (purpose is met on real data)
+- **purpose-review** — `--run-checks` runs each check twice, the second time with `fails_when` applied, and gives every check a `status`: `ok`, `failing`, `false_green`, `no_check`, `negative_error`, `manual_ok`, `manual_overdue`
+- **purpose-tree** — a node can carry `confirmed: {by, on}`: no `confirmed` means draft, the validator warns (never errors) and `purpose-review` lists drafts first; `source:` is now a structured list (`kind`, `ref`, `note`) instead of `# src:` comments; new `confirm.cjs` writes `confirmed` without losing comments; new shared `pending.cjs` writes `purpose-tree.pending.yaml`, the file a skill leaves when nobody can be asked
+- **purpose-review** — `unconfirmed` and `pending` come first in the output, `changes_since_synced` shows the diff since `last_synced`, and `--record <answers.json>` writes `reviewed` (and `confirmed`) for you; bootstrap and review use the pending file when no human is present
+- **purpose-sync** — a dispatched agent's pending items are also written to `purpose-tree.pending.yaml`, so any later session can apply the answers and delete the file
 
 ### skills-2026-11-17
 

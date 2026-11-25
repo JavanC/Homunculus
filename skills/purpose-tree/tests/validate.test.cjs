@@ -104,3 +104,39 @@ test('review fixes: mis-indented key, escaped quotes in flow, @-segment paths', 
   assert.strictEqual(t.matchKind('src/@types/', 'src/@types/a.ts'), 'prefix');
   assert.deepStrictEqual(t.pathTokens('ops@host.local and pkg@1.2/x.js', 'r'), []);
 });
+
+test('confirmed: a node without it is a draft (warning); a malformed one is an error', () => {
+  const { validate } = require(V);
+  const base = 'version: "3.0"\nroot:\n  purpose: Root.\n';
+  const draft = validate(parseYaml(base));
+  assert.deepStrictEqual(draft.errors, []);
+  assert.match(draft.warnings.join('\n'), /root: draft \(no confirmed\)/);
+  const ok = validate(parseYaml(base + '  confirmed:\n    by: Javan\n    on: 2026-11-19\n'));
+  assert.deepStrictEqual(ok.errors, []);
+  assert.deepStrictEqual(ok.warnings, []);
+  const bad = validate(parseYaml(base + '  confirmed:\n    on: 19/11/2026\n    why: x\n')).errors.join('\n');
+  assert.match(bad, /confirmed: missing by/);
+  assert.match(bad, /confirmed: on must be YYYY-MM-DD/);
+  assert.match(bad, /confirmed: unknown field "why"/);
+  assert.match(validate(parseYaml(base + '  confirmed: yes\n')).errors.join('\n'), /confirmed must be a mapping/);
+});
+
+test('source: structured list of {kind, ref, note?}; free text is an error', () => {
+  const { validate } = require(V);
+  const base = 'version: "3.0"\nroot:\n  purpose: Root.\n  confirmed:\n    by: J\n    on: 2026-11-19\n';
+  assert.deepStrictEqual(validate(parseYaml(base + '  source:\n    - kind: doc\n      ref: README.md\n')).errors, []);
+  const errs = validate(parseYaml(base + '  source:\n    - kind: rumour\n      ref: x\n    - kind: doc\n    - plain text\n')).errors.join('\n');
+  assert.match(errs, /source\[0\]: unknown kind "rumour"/);
+  assert.match(errs, /source\[1\]: missing ref/);
+  assert.match(errs, /source\[2\]: must be a mapping/);
+  assert.match(validate(parseYaml(base + '  source: README.md\n')).errors.join('\n'), /source must be a list/);
+});
+
+test('review round 1: numeric ref/by accepted; impossible dates rejected', () => {
+  const { validate } = require(V);
+  const base = 'version: "3.0"\nroot:\n  purpose: Root.\n  confirmed:\n    by: 12\n    on: 2026-02-30\n  source:\n    - kind: ticket\n      ref: 1234\n';
+  const errs = validate(parseYaml(base)).errors.join('\n');
+  assert.doesNotMatch(errs, /missing by/);
+  assert.doesNotMatch(errs, /missing ref/);
+  assert.match(errs, /on must be YYYY-MM-DD/);
+});

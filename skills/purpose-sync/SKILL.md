@@ -98,9 +98,11 @@ explicitly accepts a session-end review item (step 2b); never edit one on your o
    ```
 
    `kind` is `proposal`, `gap` or `review`; `text` is the line you would have shown. It
-   prints a `purpose-sync-pending` block and, as its last line,
-   `purpose-sync: pending proposed=<N> gaps=<N> reviews=<N>`. Put the whole output, block
-   included, in your report to whoever dispatched you, and end there: skip steps 5 and 6.
+   writes the items to `purpose-tree.pending.yaml` at the repo root (a later run adds to it)
+   and prints a `purpose-sync-pending` block and, as its last line,
+   `purpose-sync: pending proposed=<N> gaps=<N> reviews=<N>`. Commit the file with your
+   work, put the whole output, block included, in your report to whoever dispatched you,
+   and end there: skip steps 5 and 6.
    The lead asks the human (several projects' blocks can go in one batch) and passes the
    answers back to a session in this repo, which does step 5 with them.
 
@@ -110,12 +112,13 @@ explicitly accepts a session-end review item (step 2b); never edit one on your o
    baseline. Otherwise do not write the file. When `over_limit` was true, do not move
    `last_synced` unless the human asked for a reset: the backlog stays visible.
 
-   **Answers to a pending block** (from a lead): check that `repo:` and `tree:` name this
+   **Answers to a pending block** (from a lead, or any session that finds
+   `purpose-tree.pending.yaml`; the file holds the proposals as asked): check that `repo:` and `tree:` name this
    project and tree. Apply the accepted items; an item whose path no longer exists or whose
    node is gone counts as rejected. Set `last_synced` to the block's `last_synced_on_apply`
    commit (not the current `HEAD`: later commits were not shown to the human); `keep` means
    leave it, and so does a `last_synced` already at or past that commit (never move it back). Then validate as below and print the summary line of step 6, counting the
-   block's items.
+   block's items. Last, delete the file: `node <purpose-tree-skill>/scripts/pending.cjs --clear`.
 
    ```bash
    node <purpose-tree-skill>/scripts/validate.cjs

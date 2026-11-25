@@ -69,7 +69,7 @@ function collect({ sessionBase = null } = {}) {
   }
 
   const ignoreDirs = lib.syncIgnore(doc);
-  const keep = (f) => f !== tree && !lib.isIgnored(f, ignoreDirs);
+  const keep = (f) => f !== tree && f !== 'purpose-tree.pending.yaml' && !lib.isIgnored(f, ignoreDirs);
 
   // Changed paths: committed + uncommitted since base, plus untracked files.
   const changes = new Map();

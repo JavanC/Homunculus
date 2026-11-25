@@ -41,14 +41,22 @@ root:
   status:        active | paused | planned   # default active; retired nodes are deleted
   status_note:   Current state, known gaps
   paused_reason: Required when paused or planned: why, and how to resume
+  confirmed:                                 # a human's sign-off; no confirmed = draft
+    by: Javan
+    on: 2026-11-19
+  source:                                    # where a drafted purpose came from
+    - kind: doc                              # doc | code | commit | ticket | conversation | other
+      ref: README.md:3
   metrics:                                   # list of block mappings, not {...}
     - name: …
       source: …
       healthy: …
   tests:         [test file patterns]
-  health_check:                              # exit 0 = healthy
+  health_check:                              # the purpose is met on real data; exit 0 = healthy
     command: …
+    fails_when: …                            # makes the data empty / env like HEALTH_EMPTY=1; without it, no check
     expected: …
+  # or, a check only a human can run:  health_check: {kind: manual, owner, last_run}
   realized_by:
     - scripts/capture.js                     # implementation
     - id: daily_awareness                    # sub-purpose: same node format, recursive
@@ -68,6 +76,35 @@ root:
 Field details and examples: [references/schema.md](references/schema.md).
 Blank starting tree: [templates/purpose-tree.yaml](templates/purpose-tree.yaml).
 
+## Draft and confirmed
+
+A node with no `confirmed: {by, on}` is a **draft**: the AI inferred it and no human has said
+yes. Drafts are legal, so a dispatched agent that cannot ask still writes the tree. The
+validator gives each draft a warning (never an error) and `purpose-review` lists them first
+on every run, so they do not sit there unnoticed. Never write `confirmed` on your own; it
+records the human's answer. When they confirm, write it with:
+
+```bash
+node <this-skill>/scripts/confirm.cjs [tree] --by <name> [--on YYYY-MM-DD] (--all | <node-id>...)
+```
+
+Use `source:` on a drafted node instead of a `# src:` comment, so tools can read it.
+
+## When nobody can be asked
+
+A skill run by a dispatched agent (no human in the session) does not ask and does not guess
+an answer. It writes the question to `purpose-tree.pending.yaml` at the repo root, commits it
+with the work, and reports it:
+
+```bash
+echo '{"items":[{"kind":"question","node":"billing","text":"..."}]}' \
+  | node <this-skill>/scripts/pending.cjs --source sync|bootstrap|review
+```
+
+Any later session reads the file (plain YAML: `items[].text` is the question as asked),
+asks the human, applies the answers, then deletes it with `pending.cjs --clear`.
+`purpose-review` shows pending items in its output.
+
 ## Top-down rule
 
 Two kinds of node, two kinds of authority:
@@ -83,8 +120,9 @@ Two kinds of node, two kinds of authority:
 
 ## Health rules
 
-- **No false greens.** A `health_check` must fail when the data it judges does not exist.
-  `test -f`, `ls | head`, `wc -l`, or a `jq` that passes on an empty array are not checks.
+- **No false greens.** A `health_check` must fail when the data it judges does not exist, and must say how to prove it with `fails_when`:
+  `review --run-checks` runs the check again with `fails_when` applied, and a check that still exits 0 is a `false_green`. No `fails_when` = no check.
+  Unit tests go in `tests`, not `health_check`. A check only a human can run is `kind: manual` with `owner` and `last_run`.
 - **No empty husks.** A `paused` or `planned` node must have a `paused_reason`.
 - **No orphans.** Every node except root sits under a parent purpose.
 

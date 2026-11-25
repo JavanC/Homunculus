@@ -1,0 +1,16 @@
+version: "3.0"
+root:
+  purpose: Root.
+  confirmed:
+    by: Javan
+    on: 2026-11-19
+  source:
+    - kind: doc
+      ref: README.md
+  realized_by:
+    - id: draft_one
+      purpose: Not confirmed yet, which is legal.
+      source:
+        - kind: conversation
+          ref: kickoff chat 2026-11-18
+          note: agent inferred it

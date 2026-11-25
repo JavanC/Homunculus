@@ -119,7 +119,8 @@ autonomous_action:
       purpose: "Discover better approaches while developer sleeps"
       realized_by: heartbeat/heartbeat.sh        # a shell script
       health_check:
-        command: "test $(find logs/ -mtime -1 | wc -l) -gt 0"
+        command: "find logs/ -type f -mtime -1 | grep -q ."
+        fails_when: "rm -f logs/*"                # negative control: with it, the command must fail
         expected: "nightly agent ran in last 24h"
 
     task_management:
@@ -196,6 +197,14 @@ continuous_evolution:
 ---
 
 ## 最新更新
+
+### skills-2026-11-25
+
+- **purpose-tree** — `health_check` 現在必須有 `fails_when`（陰性對照：`HEALTH_EMPTY=1` 這類環境變數，或讓資料變空的指令），沒寫就視為沒有 check；人工檢查寫成 `{kind: manual, owner, last_run, every_days?}`；「只測存在」的黑名單降為警告；文件說明 `tests`（實作是對的）與 `health_check`（目的在真實資料上達成）的分工
+- **purpose-review** — `--run-checks` 每個 check 跑兩次，第二次套用 `fails_when`，每個 check 輸出 `status`：`ok`、`failing`、`false_green`、`no_check`、`negative_error`、`manual_ok`、`manual_overdue`
+- **purpose-tree** — 節點可加 `confirmed: {by, on}`：沒有就是草稿，validator 只警告（不報錯），`purpose-review` 把草稿排在最前面；`source:` 改成結構化清單（`kind`、`ref`、`note`），取代 `# src:` 註解；新增 `confirm.cjs`（寫入 `confirmed` 且保留註解）與共用的 `pending.cjs`（無人可問時寫出 `purpose-tree.pending.yaml`）
+- **purpose-review** — 輸出最前面是 `unconfirmed` 與 `pending`，新增 `changes_since_synced`（自 `last_synced` 起的變更），`--record <answers.json>` 直接寫入 `reviewed`（與 `confirmed`）；bootstrap 與 review 在沒有人可問時改走 pending 檔
+- **purpose-sync** — 被派工的 agent 的待確認項目也會寫進 `purpose-tree.pending.yaml`，之後任何 session 都能套用答案並刪檔
 
 ### skills-2026-11-17
 

@@ -79,12 +79,25 @@ test('pending: nothing to show prints only the ordinary zero summary', () => {
   assert.strictEqual(out, 'purpose-sync: proposed=0 accepted=0 rejected=0 gaps=0 reviews=0\n');
 });
 
-test('pending: never writes the tree', () => {
+test('pending: never writes the tree; the only new file is purpose-tree.pending.yaml', () => {
   const r = repo();
   const before = fs.readFileSync(path.join(r.dir, 'purpose-tree.yaml'), 'utf8');
   r.run(ITEMS);
   assert.strictEqual(fs.readFileSync(path.join(r.dir, 'purpose-tree.yaml'), 'utf8'), before);
-  assert.strictEqual(r.sh('status', '--porcelain'), '');
+  assert.strictEqual(r.sh('status', '--porcelain'), '?? purpose-tree.pending.yaml');
+});
+
+test('pending: the file carries the proposals verbatim, plus where to put last_synced on apply', () => {
+  const r = repo();
+  const head = r.sh('rev-parse', 'HEAD');
+  r.run(ITEMS);
+  const { parseYaml } = require(path.join(__dirname, '..', '..', 'purpose-tree', 'scripts', 'validate.cjs'));
+  const doc = parseYaml(fs.readFileSync(path.join(r.dir, 'purpose-tree.pending.yaml'), 'utf8'));
+  assert.deepStrictEqual(doc.items.map((i) => [i.kind, i.text]), ITEMS.items.map((i) => [i.kind, i.text]));
+  assert.strictEqual(doc.items[0].source, 'sync');
+  assert.strictEqual(doc.head, head);
+  assert.strictEqual(doc.last_synced_on_apply, head);
+  assert.strictEqual(doc.tree, 'purpose-tree.yaml');
 });
 
 test('pending: bad input is rejected with exit 1', () => {
